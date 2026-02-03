@@ -1,0 +1,256 @@
+.notifications-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 30px 16px;
+}
+
+.notifications-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.notifications-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #222;
+  margin: 0;
+}
+
+.back-button {
+  background: #fff;
+  border: 1px solid #ccc;
+  color: #666;
+  padding: 10px 18px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.back-button:hover { background: #f5f5f5; }
+
+.notifications-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notification-filters {
+  display: flex;
+  gap: 6px;
+  background: #fff;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.notification-filters button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.notification-filters button:hover { background: #f5f5f5; }
+.notification-filters button.active { background: #2d5649; color: #fff; }
+
+.mark-all-read-button {
+  padding: 10px 18px;
+  background: #2d5649;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.mark-all-read-button:hover { background: #234a3d; }
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.no-notifications-full {
+  background: #fff;
+  border-radius: 6px;
+  padding: 60px 30px;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+.no-notifications-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: .5;
+}
+
+.no-notifications-full h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 8px;
+}
+
+.no-notifications-full p {
+  font-size: 15px;
+  color: #666;
+  margin: 0;
+}
+
+.notification-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  position: relative;
+}
+
+.notification-card:hover { border-color: #bbb; }
+.notification-card.unread { border-left: 3px solid #2d5649; background: #f9fdf9; }
+
+.notification-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.notification-card-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  margin: 0;
+  flex: 1;
+}
+
+.unread-dot {
+  width: 6px;
+  height: 6px;
+  background: #2d5649;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.notification-card-message {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0 0 8px;
+  word-wrap: break-word;
+  white-space: pre-line;
+}
+
+.interview-details-box {
+  background: #f9f9f9;
+  border-left: 2px solid #2d5649;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interview-detail-item {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.6;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.interview-detail-item strong {
+  font-weight: 600;
+  color: #222;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.interview-detail-item a {
+  color: #2d5649;
+  text-decoration: none;
+}
+
+.interview-detail-item a:hover { text-decoration: underline; }
+
+.notification-card-time {
+  font-size: 13px;
+  color: #999;
+  display: block;
+  margin-top: 8px;
+}
+
+.notification-card-delete {
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.notification-card:hover .notification-card-delete { opacity: 1; }
+.notification-card-delete:hover { background: #fff5f5; color: #c00; }
+
+@media (max-width: 768px) {
+  .notifications-page { padding: 20px 14px; }
+  .notifications-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .notifications-header h1 { font-size: 20px; }
+  .notifications-controls { flex-direction: column; align-items: stretch; }
+  .notification-filters { justify-content: space-between; }
+  .notification-filters button { flex: 1; padding: 6px 10px; font-size: 12px; }
+  .mark-all-read-button { width: 100%; }
+  .notification-card { padding: 14px; }
+  .notification-card-icon { width: 36px; height: 36px; font-size: 18px; }
+  .notification-card-header h3 { font-size: 13px; }
+  .notification-card-message { font-size: 12px; }
+  .interview-details-box { padding: 10px; }
+  .interview-detail-item { flex-direction: column; gap: 2px; }
+  .interview-detail-item strong { min-width: auto; }
+  .no-notifications-full { padding: 50px 20px; }
+  .no-notifications-icon { font-size: 40px; }
+  .no-notifications-full h2 { font-size: 16px; }
+  .no-notifications-full p { font-size: 13px; }
+}
+
+@media (max-width: 480px) {
+  .notifications-page { padding: 16px 12px; }
+  .notification-card-delete { opacity: 1; }
+}

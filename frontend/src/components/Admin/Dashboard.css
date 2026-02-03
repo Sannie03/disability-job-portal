@@ -1,0 +1,223 @@
+.dashboard-page {
+  background: #f5f5f5;
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+.dashboard-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.dashboard-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 8px;
+}
+
+.dashboard-header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.stats-section { margin-bottom: 24px; }
+
+.stats-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.stat-card:hover { border-color: #bbb; }
+.stat-card.clickable { cursor: pointer; }
+.stat-card.clickable:hover { border-color: #2d5649; }
+.stat-card.clickable:focus { outline: 2px solid #2d5649; outline-offset: 2px; }
+
+.stat-content h3 {
+  font-size: 15px;
+  font-weight: 500;
+  color: #666;
+  margin: 0 0 10px;
+}
+
+.stat-number {
+  font-size: 36px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.stat-card.total { border-left: 3px solid #2d5649; }
+.stat-card.total .stat-number { color: #2d5649; }
+
+.stat-card.employers { border-left: 3px solid #0d6efd; }
+.stat-card.employers .stat-number { color: #0d6efd; }
+
+.stat-card.job-seekers { border-left: 3px solid #6f42c1; }
+.stat-card.job-seekers .stat-number { color: #6f42c1; }
+
+.stat-card.total-jobs { border-left: 3px solid #2d5649; }
+.stat-card.total-jobs .stat-number { color: #2d5649; }
+
+.stat-card.pending-jobs { border-left: 3px solid #ffc107; }
+.stat-card.pending-jobs .stat-number { color: #d39e00; }
+
+.stat-card.approved-jobs { border-left: 3px solid #28a745; }
+.stat-card.approved-jobs .stat-number { color: #28a745; }
+
+.stat-card.rejected-jobs { border-left: 3px solid #dc3545; }
+.stat-card.rejected-jobs .stat-number { color: #dc3545; }
+
+.quick-actions { margin-top: 24px; }
+
+.quick-actions h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 16px;
+}
+
+.actions-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  background: #2d5649;
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.action-btn:hover { background: #234a3d; }
+.action-btn:focus { outline: 2px solid #2d5649; outline-offset: 2px; }
+
+.loading {
+  text-align: center;
+  padding: 50px 20px;
+  font-size: 16px;
+  color: #666;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 6px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: 0;
+  font-size: 28px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover { color: #222; }
+.modal-close:focus { outline: 2px solid #2d5649; outline-offset: 2px; }
+
+.users-table-container {
+  overflow: auto;
+  flex: 1;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table thead { background: #fafafa; }
+
+.users-table th {
+  padding: 14px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  border-bottom: 1px solid #ddd;
+}
+
+.users-table td {
+  padding: 14px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+}
+
+.users-table tbody tr:hover { background: #fafafa; }
+.users-table tbody tr:last-child td { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .dashboard-page { padding: 20px 14px; }
+  .dashboard-header h1 { font-size: 20px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-card { padding: 16px; }
+  .stat-number { font-size: 26px; }
+  .modal-header { padding: 14px 16px; }
+  .users-table th, .users-table td { padding: 10px; font-size: 12px; }
+}
