@@ -10,16 +10,20 @@ export const getAllJobs = catchAsyncErrors(async (req, res, next) => {
   // Limit max items per page
   const finalLimit = Math.min(limit, 10);
 
+  const filter = {
+    expired: false,
+    status: "approved",
+    isDeleted: { $ne: true },
+    deadline: { $gt: new Date() },
+  };
+
   const [jobs, total] = await Promise.all([
-    Job.find({
-      expired: false,
-      status: "approved",
-    })
+    Job.find(filter)
       .populate("postedBy", "name email companyInfo")
       .sort({ jobPostedOn: -1 })
       .skip(skip)
       .limit(finalLimit),
-    Job.countDocuments({ expired: false, status: "approved" })
+    Job.countDocuments(filter)
   ]);
 
   res.status(200).json({
@@ -35,13 +39,6 @@ export const getAllJobs = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const postJob = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role === "Job Seeker") {
-    return next(
-      new ErrorHandler("Ứng viên không được phép truy cập tài nguyên này.", 400)
-    );
-  }
-
   const {
     title,
     description,
@@ -151,13 +148,7 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const getMyJobs = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role === "Job Seeker") {
-    return next(
-      new ErrorHandler("Ứng viên không được phép truy cập tài nguyên này.", 400)
-    );
-  }
-  const myJobs = await Job.find({ postedBy: req.user._id });
+  const myJobs = await Job.find({ postedBy: req.user._id, isDeleted: { $ne: true } });
   res.status(200).json({
     success: true,
     myJobs,
@@ -165,18 +156,15 @@ export const getMyJobs = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const updateJob = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role === "Job Seeker") {
-    return next(
-      new ErrorHandler("Ứng viên không được phép truy cập tài nguyên này.", 400)
-    );
-  }
-
   const { id } = req.params;
   let job = await Job.findById(id);
-  
+
   if (!job) {
     return next(new ErrorHandler("OOPS! Không tìm thấy công việc.", 404));
+  }
+
+  if (job.isDeleted) {
+    return next(new ErrorHandler("Không thể cập nhật công việc đã bị xóa.", 400));
   }
 
   // Kiểm tra quyền sở hữu
@@ -184,73 +172,90 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Bạn không có quyền cập nhật công việc này.", 403));
   }
 
-  // Validation: Nếu update deadline, phải là ngày trong tương lai
+  // Validation: Nếu deadline thay đổi, phải là ngày trong tương lai
   if (req.body.deadline) {
     const deadlineDate = new Date(req.body.deadline);
-    if (deadlineDate <= new Date()) {
+    const existingDeadline = new Date(job.deadline);
+    // Chỉ validate nếu deadline thực sự thay đổi
+    if (deadlineDate.getTime() !== existingDeadline.getTime() && deadlineDate <= new Date()) {
       return next(new ErrorHandler("Hạn nộp hồ sơ phải là ngày trong tương lai.", 400));
     }
   }
 
-  // Validation và xử lý lương
-  const { fixedSalary, salaryFrom, salaryTo } = req.body;
+  // Whitelist: chỉ cho phép update các field này
+  const {
+    title, description, category, city, location,
+    workMode, isFlexibleTime, workTime, deadline,
+    isDisabilityFriendly, supportedDisabilities,
+    fixedSalary, salaryFrom, salaryTo,
+  } = req.body;
 
-  // Chuẩn bị update data
-  const updateData = { ...req.body };
+  const updateData = {};
   const unsetFields = {};
 
-  // Xử lý chuyển đổi loại lương
-  const hasFixedSalary = fixedSalary !== undefined && fixedSalary !== null && fixedSalary !== "" && Number(fixedSalary) > 0;
-  const hasSalaryRange = ((salaryFrom !== undefined && salaryFrom !== null && salaryFrom !== "" && Number(salaryFrom) > 0) ||
-                         (salaryTo !== undefined && salaryTo !== null && salaryTo !== "" && Number(salaryTo) > 0));
+  // Copy các field được phép (bỏ qua undefined)
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+  if (category !== undefined) updateData.category = category;
+  if (city !== undefined) updateData.city = city;
+  if (location !== undefined) updateData.location = location;
+  if (workMode !== undefined) updateData.workMode = workMode;
+  if (isDisabilityFriendly !== undefined) updateData.isDisabilityFriendly = !!isDisabilityFriendly;
+  if (supportedDisabilities !== undefined) updateData.supportedDisabilities = supportedDisabilities;
 
-  // Xóa tất cả salary fields khỏi updateData trước
-  delete updateData.fixedSalary;
-  delete updateData.salaryFrom;
-  delete updateData.salaryTo;
+  // Thời gian làm việc
+  if (isFlexibleTime !== undefined) {
+    updateData.isFlexibleTime = !!isFlexibleTime;
+    if (isFlexibleTime) {
+      updateData.workTime = null;
+    } else if (workTime?.start && workTime?.end) {
+      updateData.workTime = { start: workTime.start, end: workTime.end };
+    } else {
+      return next(new ErrorHandler("Vui lòng nhập thời gian làm việc.", 400));
+    }
+  }
 
-  if (hasFixedSalary) {
-    // Chuyển sang lương cố định -> set fixedSalary, xóa salaryFrom/salaryTo
+  // Deadline
+  if (deadline !== undefined) {
+    updateData.deadline = deadline;
+  }
+
+  // Expired: employer tự đóng/mở tin
+  const { expired } = req.body;
+  if (expired !== undefined) {
+    updateData.expired = expired === true || expired === "true";
+  }
+
+  // Validation: disability
+  if (updateData.isDisabilityFriendly === true && (!updateData.supportedDisabilities || updateData.supportedDisabilities.length === 0)) {
+    return next(new ErrorHandler("Vui lòng chọn ít nhất một loại khiếm khuyết được hỗ trợ.", 400));
+  }
+
+  // Xử lý lương
+  const hasFixed = fixedSalary !== undefined && fixedSalary !== null && fixedSalary !== "" && Number(fixedSalary) > 0;
+  const hasRange = (salaryFrom !== undefined && salaryFrom !== null && salaryFrom !== "" && Number(salaryFrom) > 0) ||
+                   (salaryTo !== undefined && salaryTo !== null && salaryTo !== "" && Number(salaryTo) > 0);
+
+  if (hasFixed) {
     updateData.fixedSalary = Number(fixedSalary);
     unsetFields.salaryFrom = "";
     unsetFields.salaryTo = "";
-  } else if (hasSalaryRange) {
-    // Chuyển sang lương theo khoảng -> set salaryFrom/salaryTo, xóa fixedSalary
+  } else if (hasRange) {
     unsetFields.fixedSalary = "";
-    if (salaryFrom !== undefined && salaryFrom !== null && salaryFrom !== "" && Number(salaryFrom) > 0) {
-      updateData.salaryFrom = Number(salaryFrom);
-    }
-    if (salaryTo !== undefined && salaryTo !== null && salaryTo !== "" && Number(salaryTo) > 0) {
-      updateData.salaryTo = Number(salaryTo);
-    }
-
-    // Validation: salaryFrom phải nhỏ hơn salaryTo
+    if (Number(salaryFrom) > 0) updateData.salaryFrom = Number(salaryFrom);
+    if (Number(salaryTo) > 0) updateData.salaryTo = Number(salaryTo);
     if (updateData.salaryFrom && updateData.salaryTo && updateData.salaryFrom >= updateData.salaryTo) {
       return next(new ErrorHandler("Lương từ phải nhỏ hơn lương đến.", 400));
     }
   }
 
-  // Validation: Nếu update isFlexibleTime = false, phải có workTime
-  if (req.body.isFlexibleTime === false && (!req.body.workTime || !req.body.workTime.start || !req.body.workTime.end)) {
-    return next(new ErrorHandler("Vui lòng nhập thời gian làm việc.", 400));
-  }
-
-  // Validation: Nếu update isDisabilityFriendly = true, phải có supportedDisabilities
-  if (req.body.isDisabilityFriendly === true && (!req.body.supportedDisabilities || req.body.supportedDisabilities.length === 0)) {
-    return next(new ErrorHandler("Vui lòng chọn ít nhất một loại khiếm khuyết được hỗ trợ.", 400));
-  }
-
-  // Tạo update query
+  // Build query
   const updateQuery = { $set: updateData };
   if (Object.keys(unsetFields).length > 0) {
     updateQuery.$unset = unsetFields;
   }
 
-  job = await Job.findByIdAndUpdate(id, updateQuery, {
-    new: true,
-    runValidators: true,
-    useFindAndModify: false,
-  });
+  job = await Job.findByIdAndUpdate(id, updateQuery, { new: true });
 
   res.status(200).json({
     success: true,
@@ -260,16 +265,9 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const deleteJob = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role === "Job Seeker") {
-    return next(
-      new ErrorHandler("Ứng viên không được phép truy cập tài nguyên này.", 400)
-    );
-  }
-
   const { id } = req.params;
   const job = await Job.findById(id);
-  
+
   if (!job) {
     return next(new ErrorHandler("OOPS! Không tìm thấy công việc.", 404));
   }
@@ -279,8 +277,13 @@ export const deleteJob = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Bạn không có quyền xóa công việc này.", 403));
   }
 
-  await job.deleteOne();
-  
+  if (job.isDeleted) {
+    return next(new ErrorHandler("Công việc này đã được xóa trước đó.", 400));
+  }
+
+  // Soft delete: đánh dấu đã xóa thay vì xóa khỏi DB
+  await Job.findByIdAndUpdate(id, { isDeleted: true, deletedAt: new Date() });
+
   res.status(200).json({
     success: true,
     message: "Xóa công việc thành công!",
@@ -291,7 +294,7 @@ export const getSingleJob = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
   try {
     const job = await Job.findById(id).populate("postedBy", "name email companyInfo");
-    if (!job) {
+    if (!job || job.isDeleted) {
       return next(new ErrorHandler("OOPS! Không tìm thấy công việc.", 404));
     }
     res.status(200).json({
@@ -307,9 +310,11 @@ export const getSingleJob = catchAsyncErrors(async (req, res, next) => {
 export const getDisabilityFriendlyJobs = catchAsyncErrors(async (req, res, next) => {
   const { disabilityType } = req.query;
 
-  let filter = { 
-    expired: false, 
-    isDisabilityFriendly: true 
+  let filter = {
+    expired: false,
+    isDisabilityFriendly: true,
+    isDeleted: { $ne: true },
+    deadline: { $gt: new Date() },
   };
 
   // Nếu có chỉ định loại khiếm khuyết cụ thể
@@ -339,7 +344,7 @@ export const searchJobs = catchAsyncErrors(async (req, res, next) => {
     salaryMax 
   } = req.query;
 
-  let filter = { expired: false };
+  let filter = { expired: false, isDeleted: { $ne: true }, deadline: { $gt: new Date() } };
 
   // Tìm kiếm theo keyword trong title hoặc description
   if (keyword) {
@@ -420,13 +425,6 @@ export const searchJobs = catchAsyncErrors(async (req, res, next) => {
 
 // Controller mới: Gia hạn deadline
 export const extendDeadline = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role === "Job Seeker") {
-    return next(
-      new ErrorHandler("Ứng viên không được phép truy cập tài nguyên này.", 400)
-    );
-  }
-
   const { id } = req.params;
   const { newDeadline } = req.body;
 
@@ -437,9 +435,13 @@ export const extendDeadline = catchAsyncErrors(async (req, res, next) => {
 
   // Tìm job
   const job = await Job.findById(id);
-  
+
   if (!job) {
     return next(new ErrorHandler("OOPS! Không tìm thấy công việc.", 404));
+  }
+
+  if (job.isDeleted) {
+    return next(new ErrorHandler("Không thể gia hạn công việc đã bị xóa.", 400));
   }
 
   // Kiểm tra quyền sở hữu

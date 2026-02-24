@@ -12,5 +12,24 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
 
   req.user = await User.findById(decoded.id);
 
+  if (!req.user) {
+    return next(new ErrorHandler("Người dùng không tồn tại", 401));
+  }
+
   next();
 });
+
+// Middleware phân quyền theo vai trò
+export const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new ErrorHandler(
+          `Vai trò ${req.user.role} không được phép truy cập tài nguyên này.`,
+          403
+        )
+      );
+    }
+    next();
+  };
+};

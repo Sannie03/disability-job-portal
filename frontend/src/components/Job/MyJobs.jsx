@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../utils/api";
 import { useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FaCheck } from "react-icons/fa6";
@@ -38,10 +38,7 @@ const MyJobs = () => {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const { data } = await axios.get(
-          "http://localhost:5000/api/v1/job/getmyjobs",
-          { withCredentials: true }
-        );
+        const { data } = await api.get("/job/getmyjobs");
         // normalize salaryType để dùng trong form
         const normalized = (data.myJobs || []).map((job) => ({
           ...job,
@@ -90,10 +87,9 @@ const MyJobs = () => {
     }
 
     try {
-      const res = await axios.put(
-        `http://localhost:5000/api/v1/job/update/${jobId}`,
-        payload,
-        { withCredentials: true }
+      const res = await api.put(
+        `/job/update/${jobId}`,
+        payload
       );
       toast.success(res.data.message);
       if (res.data.job) {
@@ -113,10 +109,7 @@ const MyJobs = () => {
 
   const handleDeleteJob = async (jobId) => {
     try {
-      const res = await axios.delete(
-        `http://localhost:5000/api/v1/job/delete/${jobId}`,
-        { withCredentials: true }
-      );
+      const res = await api.delete(`/job/delete/${jobId}`);
       toast.success(res.data.message);
       setMyJobs((prev) => prev.filter((job) => job._id !== jobId));
     } catch (error) {

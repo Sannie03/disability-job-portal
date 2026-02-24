@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNotifications } from "../../context/NotificationContext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import "./Notifications.css";
 
@@ -83,14 +83,13 @@ const Notifications = () => {
 
   const handleInterviewResponse = async (notification, response) => {
     try {
-      await axios.post(
-        `http://localhost:5000/api/v1/application/interview-response`,
+      await api.post(
+        "/application/interview-response",
         {
           notificationId: notification._id,
           jobId: notification.jobId,
-          response: response, // 'confirmed' hoặc 'declined'
-        },
-        { withCredentials: true }
+          response: response,
+        }
       );
 
       if (response === 'confirmed') {

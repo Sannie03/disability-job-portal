@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react"
-import axios from "axios"
+import api from "../../utils/api"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import { Context } from "../../main"
@@ -24,10 +24,7 @@ const ManageJobs = () => {
 
   const fetchPendingJobs = async () => {
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/v1/job/admin/pending",
-        { withCredentials: true }
-      )
+      const { data } = await api.get("/job/admin/pending")
       setJobs(data.jobs)
     } catch (error) {
       toast.error("Không thể tải danh sách tin chờ duyệt")
@@ -58,11 +55,7 @@ const ManageJobs = () => {
 
   const approveOne = async (id) => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/job/admin/${id}/approve`,
-        {},
-        { withCredentials: true }
-      )
+      await api.put(`/job/admin/${id}/approve`, {})
       toast.success("Đã duyệt tin")
       fetchPendingJobs()
       setSelectedJobs([])
@@ -76,10 +69,9 @@ const ManageJobs = () => {
     if (!reason) return
 
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/job/admin/${id}/reject`,
-        { reason },
-        { withCredentials: true }
+      await api.put(
+        `/job/admin/${id}/reject`,
+        { reason }
       )
       toast.success("Đã từ chối tin")
       fetchPendingJobs()
@@ -97,10 +89,9 @@ const ManageJobs = () => {
 
     try {
       setLoading(true)
-      await axios.put(
-        "http://localhost:5000/api/v1/job/admin/approve-many",
-        { jobIds: selectedJobs },
-        { withCredentials: true }
+      await api.put(
+        "/job/admin/approve-many",
+        { jobIds: selectedJobs }
       )
       toast.success(`Đã duyệt ${selectedJobs.length} tin`)
       fetchPendingJobs()

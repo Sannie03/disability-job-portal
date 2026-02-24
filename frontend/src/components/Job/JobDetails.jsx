@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import { Context } from "../../main";
 import toast from "react-hot-toast";
 import "./JobDetails.css";
@@ -20,240 +20,158 @@ const JobDetails = () => {
   };
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/v1/job/${id}`, { withCredentials: true })
+    api
+      .get(`/job/${id}`)
       .then((res) => setJob(res.data.job))
       .catch(() => navigate("/notfound"));
   }, []);
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString("vi-VN") : "";
+  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("vi-VN") : "");
   const formatSalary = (v) => v?.toLocaleString("vi-VN");
 
-  // tạo text mô tả cho screen reader về loại khuyết tật được hỗ trợ
-  const getDisabilityDescription = () => {
-    if (!job.isDisabilityFriendly || !job.supportedDisabilities?.length) return "";
-    return `Công việc này hỗ trợ người khuyết tật: ${job.supportedDisabilities.join(", ")}`;
-  };
+  const salary = job.fixedSalary
+    ? `${formatSalary(job.fixedSalary)} VNĐ`
+    : `${formatSalary(job.salaryFrom)} – ${formatSalary(job.salaryTo)} VNĐ`;
+
+  const companyName = job.postedBy?.companyInfo?.companyName || job.postedBy?.name;
 
   return (
-    <section className="jobDetail page" aria-label={`Chi tiết công việc: ${job.title}`}>
-      <div className="container">
+    <section className="jd-page" aria-label={`Chi tiết: ${job.title}`}>
+      <div className="jd-wrap">
+
         {job.expired && (
-          <div className="warning-box" role="alert" aria-live="polite">
+          <div className="jd-expired" role="alert">
             Tin tuyển dụng này đã hết hạn nộp hồ sơ
           </div>
         )}
 
-        {/* Company Header - Full Width */}
-        {job.postedBy && (
-          <div className="company-header-card">
-            <div className="company-header-content">
-              <div className="company-logo-large">
-                {(job.postedBy.companyInfo?.companyName || job.postedBy.name)?.charAt(0).toUpperCase()}
+        {/* ===== Header ===== */}
+        <header className="jd-header">
+          <div className="jd-header-left">
+            {job.postedBy && (
+              <span className="jd-company-name">{companyName}</span>
+            )}
+            <h1 className="jd-title">{job.title}</h1>
+            <div className="jd-quick-tags">
+              {job.category && <span className="qt qt-cat">{job.category}</span>}
+              {job.city && <span className="qt qt-loc">{job.city}</span>}
+              {job.workMode && (
+                <span className="qt qt-mode">
+                  {job.workMode === "Online" ? "Từ xa" : job.workMode === "Offline" ? "Tại văn phòng" : "Kết hợp"}
+                </span>
+              )}
+            </div>
+            {job.isDisabilityFriendly && job.supportedDisabilities?.length > 0 && (
+              <div className="jd-nkt-row">
+                <span className="jd-nkt-label">Hỗ trợ NKT:</span>
+                {job.supportedDisabilities.map((d, i) => (
+                  <span key={i} className="jd-nkt-tag">{d}</span>
+                ))}
               </div>
-              <div className="company-info-details">
-                <h2 className="company-name-large">
-                  {job.postedBy.companyInfo?.companyName || job.postedBy.name}
-                </h2>
-                <div className="company-meta-row">
-                  {job.postedBy.companyInfo?.companySize && (
-                    <span className="meta-badge">
-                      {job.postedBy.companyInfo.companySize} nhân viên
-                    </span>
-                  )}
-                  {job.postedBy.companyInfo?.address && (
-                    <span className="meta-badge">
-                      {job.postedBy.companyInfo.address}
-                    </span>
-                  )}
+            )}
+          </div>
+
+          <div className="jd-header-right">
+            <div className="jd-salary">{salary}</div>
+            {job.status && job.status !== "approved" && (
+              <span className="jd-status-pending">Chờ duyệt</span>
+            )}
+            {(!user || user.role !== "Employer") && !job.expired && job.status === "approved" && (
+              <Link to={`/application/${job._id}`} className="jd-btn-apply" onClick={handleApply}>
+                Ứng tuyển ngay
+              </Link>
+            )}
+          </div>
+        </header>
+
+        <div className="jd-content">
+
+          {/* Chi tiết tuyển dụng */}
+          <div className="jd-block">
+            <h2>Chi tiết tuyển dụng</h2>
+            <div className="jd-details-grid">
+              <div className="jd-detail">
+                <span className="jd-detail-label">Địa điểm</span>
+                <span className="jd-detail-value">{job.location}{job.city ? `, ${job.city}` : ""}</span>
+              </div>
+              <div className="jd-detail">
+                <span className="jd-detail-label">Hình thức</span>
+                <span className="jd-detail-value">
+                  {job.workMode === "Online" ? "Làm việc từ xa" : job.workMode === "Offline" ? "Tại văn phòng" : "Kết hợp (Hybrid)"}
+                </span>
+              </div>
+              <div className="jd-detail">
+                <span className="jd-detail-label">Thời gian</span>
+                <span className="jd-detail-value">
+                  {job.isFlexibleTime ? "Linh hoạt" : `${job.workTime?.start} – ${job.workTime?.end}`}
+                </span>
+              </div>
+              <div className="jd-detail">
+                <span className="jd-detail-label">Hạn nộp</span>
+                <span className="jd-detail-value">{formatDate(job.deadline)}</span>
+              </div>
+              {job.jobPostedOn && (
+                <div className="jd-detail">
+                  <span className="jd-detail-label">Ngày đăng</span>
+                  <span className="jd-detail-value">{formatDate(job.jobPostedOn)}</span>
                 </div>
-              </div>
-              {job.postedBy.companyInfo?.website && (
-                <a
-                  href={
-                    job.postedBy.companyInfo.website.startsWith('http')
-                      ? job.postedBy.companyInfo.website
-                      : `https://${job.postedBy.companyInfo.website}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="company-website-link"
-                >
-                  🌐 Website
-                </a>
               )}
             </div>
           </div>
-        )}
 
-        {/* Main Content */}
-        <div className="job-detail-layout">
-          {/* Left Column - Main Info */}
-          <main className="job-main-column">
-            {/* Job Title Card */}
-            <div className="job-title-card">
-              <div className="job-title-header">
-                <h1 className="job-title-main">{job.title}</h1>
-                <span className={`status-badge status-${job.status}`}>
-                  {job.status === "approved" ? "✓ Đang tuyển" : "⏳ Chờ duyệt"}
-                </span>
-              </div>
-              <div className="job-quick-info">
-                <span className="quick-info-item">
-                  <span className="info-icon">💼</span>
-                  {job.category}
-                </span>
-                <span className="quick-info-item">
-                  <span className="info-icon">📍</span>
-                  {job.city}
-                </span>
-                <span className="quick-info-item">
-                  <span className="info-icon">💰</span>
-                  {job.fixedSalary
-                    ? `${formatSalary(job.fixedSalary)} VNĐ`
-                    : `${formatSalary(job.salaryFrom)} - ${formatSalary(job.salaryTo)} VNĐ`}
-                </span>
-                <span className="quick-info-item">
-                  <span className="info-icon">📅</span>
-                  Hạn: {formatDate(job.deadline)}
-                </span>
-              </div>
-            </div>
+          {/* Mô tả */}
+          <div className="jd-block">
+            <h2>Mô tả công việc</h2>
+            <div className="jd-prose">{job.description}</div>
+          </div>
 
-            {/* Chi tiết công việc */}
-            <div className="detail-card">
-              <h2 className="detail-card-title">📋 Chi tiết tuyển dụng</h2>
-              <div className="detail-grid">
-                <div className="detail-item">
-                  <div className="detail-label">Hình thức làm việc</div>
-                  <div className="detail-value">{job.workMode}</div>
+          {/* Về nhà tuyển dụng */}
+          {job.postedBy && (
+            <div className="jd-block">
+              <h2>Về nhà tuyển dụng</h2>
+              <div className="jd-employer-block">
+                <div className="jd-avatar">
+                  {companyName?.charAt(0).toUpperCase()}
                 </div>
-                <div className="detail-item">
-                  <div className="detail-label">Thời gian làm việc</div>
-                  <div className="detail-value">
-                    {job.isFlexibleTime ? "⏰ Linh hoạt" : `${job.workTime?.start} - ${job.workTime?.end}`}
+                <div className="jd-employer-info">
+                  <span className="jd-employer-name">{companyName}</span>
+                  <div className="jd-employer-meta">
+                    {job.postedBy.companyInfo?.companySize && (
+                      <span>{job.postedBy.companyInfo.companySize} nhân viên</span>
+                    )}
+                    {job.postedBy.companyInfo?.address && (
+                      <span>{job.postedBy.companyInfo.address}</span>
+                    )}
                   </div>
                 </div>
-                <div className="detail-item full-width">
-                  <div className="detail-label">Địa điểm làm việc</div>
-                  <div className="detail-value">📍 {job.location}, {job.city}</div>
-                </div>
               </div>
-            </div>
-
-            {/* Mô tả công việc */}
-            <div className="detail-card">
-              <h2 className="detail-card-title">📝 Mô tả công việc</h2>
-              <div className="detail-content">
-                {job.description}
-              </div>
-            </div>
-
-            {/* Hỗ trợ NKT */}
-            {job.isDisabilityFriendly && (
-              <div className="detail-card disability-card">
-                <h2 className="detail-card-title">♿ Hỗ trợ người khuyết tật</h2>
-                <div className="disability-tags">
-                  {job.supportedDisabilities?.map((d, i) => (
-                    <span key={i} className="disability-tag-large">
-                      ✓ {d}
-                    </span>
-                  ))}
+              {job.postedBy.companyInfo?.description && (
+                <div className="jd-prose jd-employer-desc">{job.postedBy.companyInfo.description}</div>
+              )}
+              <div className="jd-contacts">
+                <div className="jd-contact">
+                  <span className="jd-contact-label">Email</span>
+                  <a href={`mailto:${job.postedBy.email}`}>{job.postedBy.email}</a>
                 </div>
-              </div>
-            )}
-
-            {/* Về công ty */}
-            {job.postedBy?.companyInfo?.description && (
-              <div className="detail-card">
-                <h2 className="detail-card-title">🏢 Về công ty</h2>
-                <div className="detail-content">
-                  {job.postedBy.companyInfo.description}
-                </div>
-                <div className="company-contact-section">
-                  <div className="contact-row">
-                    <span className="contact-label">📧 Email:</span>
-                    <a href={`mailto:${job.postedBy.email}`} className="contact-value">
-                      {job.postedBy.email}
+                {job.postedBy.companyInfo?.website && (
+                  <div className="jd-contact">
+                    <span className="jd-contact-label">Website</span>
+                    <a
+                      href={
+                        job.postedBy.companyInfo.website.startsWith("http")
+                          ? job.postedBy.companyInfo.website
+                          : `https://${job.postedBy.companyInfo.website}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {job.postedBy.companyInfo.website}
                     </a>
                   </div>
-                  {job.postedBy.companyInfo?.website && (
-                    <div className="contact-row">
-                      <span className="contact-label">🌐 Website:</span>
-                      <a
-                        href={
-                          job.postedBy.companyInfo.website.startsWith('http')
-                            ? job.postedBy.companyInfo.website
-                            : `https://${job.postedBy.companyInfo.website}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="contact-value"
-                      >
-                        {job.postedBy.companyInfo.website}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </main>
-
-          {/* Right Column - Sticky Sidebar */}
-          <aside className="job-sidebar-column">
-            {/* Nút ứng tuyển sticky */}
-            {(!user || user.role !== "Employer") && !job.expired && job.status === "approved" && (
-              <div className="apply-card sticky-card">
-                <Link
-                  to={`/application/${job._id}`}
-                  className="apply-btn-large"
-                  onClick={handleApply}
-                >
-                  <span className="btn-icon">📄</span>
-                  Nộp đơn ứng tuyển
-                </Link>
-                <p className="apply-note">Miễn phí, nhanh chóng</p>
-              </div>
-            )}
-
-            {/* Thông tin tóm tắt */}
-            <div className="summary-card">
-              <h3 className="summary-title">Thông tin chung</h3>
-              <div className="summary-list">
-                <div className="summary-item">
-                  <div className="summary-icon">💰</div>
-                  <div className="summary-content">
-                    <div className="summary-label">Mức lương</div>
-                    <div className="summary-value">
-                      {job.fixedSalary
-                        ? `${formatSalary(job.fixedSalary)} VNĐ`
-                        : `${formatSalary(job.salaryFrom)} - ${formatSalary(job.salaryTo)} VNĐ`}
-                    </div>
-                  </div>
-                </div>
-                <div className="summary-item">
-                  <div className="summary-icon">📅</div>
-                  <div className="summary-content">
-                    <div className="summary-label">Hạn nộp hồ sơ</div>
-                    <div className="summary-value">{formatDate(job.deadline)}</div>
-                  </div>
-                </div>
-                <div className="summary-item">
-                  <div className="summary-icon">💼</div>
-                  <div className="summary-content">
-                    <div className="summary-label">Danh mục</div>
-                    <div className="summary-value">{job.category}</div>
-                  </div>
-                </div>
-                <div className="summary-item">
-                  <div className="summary-icon">🏠</div>
-                  <div className="summary-content">
-                    <div className="summary-label">Hình thức</div>
-                    <div className="summary-value">{job.workMode}</div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
-          </aside>
+          )}
         </div>
       </div>
     </section>

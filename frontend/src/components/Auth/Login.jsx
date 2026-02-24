@@ -4,7 +4,7 @@ import { RiLock2Fill } from "react-icons/ri";
 import { FaRegUser } from "react-icons/fa";
 import { Link, Navigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import axios from "axios";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import { Context } from "../../main";
 
@@ -24,13 +24,9 @@ const Login = () => {
     }
 
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/v1/user/login",
-        { email, password, role },
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
+      const { data } = await api.post(
+        "/user/login",
+        { email, password, role }
       );
 
       toast.success(data.message);
@@ -56,10 +52,9 @@ const Login = () => {
     }
 
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/v1/user/google-login",
-        { tokenId: res.credential, role },
-        { withCredentials: true }
+      const { data } = await api.post(
+        "/user/google-login",
+        { tokenId: res.credential, role }
       );
       toast.success(data.message);
       setIsAuthorized(true);

@@ -5,7 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Login from "./components/Auth/Login";
 import Register from "./components/Auth/Register";
 import { Toaster } from "react-hot-toast";
-import axios from "axios";
+import api from "./utils/api";
 import Navbar from "./components/Layout/Navbar";
 import Footer from "./components/Layout/Footer";
 import Home from "./components/Home/Home";
@@ -26,12 +26,7 @@ const App = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:5000/api/v1/user/getuser",
-          {
-            withCredentials: true,
-          }
-        );
+        const response = await api.get("/user/getuser");
         setUser(response.data.user);
         setIsAuthorized(true);
       } catch (error) {

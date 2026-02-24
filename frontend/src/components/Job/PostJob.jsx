@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect, useCallback, useMemo, useRef } from "react"
-import axios from "axios"
+import api from "../../utils/api"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import { Context } from "../../main"
@@ -38,8 +38,6 @@ const DISABILITIES = [
   { value: "Giao tiếp", label: "Giao tiếp" },
   { value: "Khác", label: "Khác" },
 ]
-
-const API_URL = "http://localhost:5000/api/v1/job/post"
 
 const PROVINCES = [
   "Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ",
@@ -235,7 +233,7 @@ const PostJob = () => {
 
     setIsSubmitting(true)
     try {
-      await axios.post(API_URL, jobData, { withCredentials: true })
+      await api.post("/job/post", jobData)
       toast.success("Đăng tin thành công! Tin đang chờ duyệt.")
       navigate("/myjobs")
     } catch (error) {

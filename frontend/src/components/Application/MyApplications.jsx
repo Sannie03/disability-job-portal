@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { Context } from "../../main";
-import axios from "axios";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import ResumeModal from "./ResumeModal";
@@ -18,18 +18,14 @@ const MyApplications = () => {
   useEffect(() => {
     try {
       if (user && user.role === "Employer") {
-        axios
-          .get("http://localhost:5000/api/v1/application/employer/getall", {
-            withCredentials: true,
-          })
+        api
+          .get("/application/employer/getall")
           .then((res) => {
             setApplications(res.data.applications);
           });
       } else {
-        axios
-          .get("http://localhost:5000/api/v1/application/jobseeker/getall", {
-            withCredentials: true,
-          })
+        api
+          .get("/application/jobseeker/getall")
           .then((res) => {
             setApplications(res.data.applications);
           });
@@ -45,10 +41,8 @@ const MyApplications = () => {
 
   const deleteApplication = (id) => {
     try {
-      axios
-        .delete(`http://localhost:5000/api/v1/application/delete/${id}`, {
-          withCredentials: true,
-        })
+      api
+        .delete(`/application/delete/${id}`)
         .then((res) => {
           toast.success(res.data.message);
           setApplications((prevApplication) =>
@@ -126,7 +120,7 @@ export default MyApplications;
 
 const JobSeekerCard = ({ element, deleteApplication, openModal }) => {
   const isImage = element.resume.url.match(/\.(jpg|jpeg|png|webp)$/i);
-  const jobTitle = element.jobInfo?.jobTitle || "Không rõ vị trí";
+  const jobTitle = element.jobId?.title || "Không rõ vị trí";
 
   return (
     <article className="job_seeker_card" role="listitem" aria-label={`Đơn ứng tuyển vị trí ${jobTitle}`}>
@@ -203,15 +197,14 @@ const EmployerCard = ({ element, openModal }) => {
   const [interviewMode, setInterviewMode] = useState(element.interviewSchedule?.mode || 'Online');
   const [interviewLocation, setInterviewLocation] = useState(element.interviewSchedule?.location || '');
   const isImage = element.resume.url.match(/\.(jpg|jpeg|png|webp)$/i);
-  const jobTitle = element.jobInfo?.jobTitle || "Không rõ vị trí";
+  const jobTitle = element.jobId?.title || "Không rõ vị trí";
   const formId = `schedule-form-${element._id}`;
 
   const handleAccept = async () => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/application/update-status/${element._id}`,
-        { status: 'accepted' },
-        { withCredentials: true }
+      await api.put(
+        `/application/update-status/${element._id}`,
+        { status: 'accepted' }
       );
       setStatus('accepted');
       toast.success(`Đã chấp nhận ứng viên ${element.name}`);
@@ -223,10 +216,9 @@ const EmployerCard = ({ element, openModal }) => {
 
   const handleReject = async () => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/application/update-status/${element._id}`,
-        { status: 'rejected' },
-        { withCredentials: true }
+      await api.put(
+        `/application/update-status/${element._id}`,
+        { status: 'rejected' }
       );
       setStatus('rejected');
       toast.success(`Đã từ chối ứng viên ${element.name}`);
@@ -246,16 +238,15 @@ const EmployerCard = ({ element, openModal }) => {
     }
 
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/application/update-status/${element._id}`,
+      await api.put(
+        `/application/update-status/${element._id}`,
         {
           status: 'accepted',
           interviewDate,
           interviewTime,
           interviewMode,
           interviewLocation,
-        },
-        { withCredentials: true }
+        }
       );
       setStatus('scheduled');
       setShowScheduleForm(false);

@@ -233,517 +233,290 @@ p {
   }
 }
 
-.footerShow {
-  background: #18191c;
-  display: flex;
-  justify-content: space-between;
-  padding: 30px 120px;
-  align-items: center;
-}
-.footerShow div {
-  display: flex;
-  gap: 12px;
-  font-size: 15px;
-  color: #f1f3f6;
-}
-.footerShow div a {
-  font-size: 18px;
-  text-decoration: none;
-  color: #f1f3f6;
-}
-.footerShow div a:hover {
-  color: #2d5649;
-  transform: scale(1.2);
-  transition: all 0.3s;
-}
-.footerHide {
-  display: none;
-}
-@media (max-width: 830px) {
-  .footerShow {
-    padding: 25px 45px;
-  }
-}
-@media (max-width: 550px) {
-  .footerShow {
-    flex-direction: column-reverse;
-    gap: 25px;
-    text-align: center;
-  }
-}
 .navbarHide {
   display: none;
 }
 
-.heroSection {
+/* ========================================
+   HOME PAGE — Editorial Style
+   ======================================== */
+
+/* ===== HERO — Cinematic ===== */
+.home-hero {
+  position: relative;
+  height: 85vh;
+  min-height: 500px;
+  max-height: 800px;
+  overflow: hidden;
   display: flex;
-  flex-direction: column;
-  padding: 75px 0 50px 0;
-}
-.heroSection .container,
-.heroSection .details {
-  min-width: 1500px;
-  max-width: 1500px;
-  margin: 0 auto;
-}
-.heroSection .container {
-  display: flex;
-  height: 450px;
-  margin-bottom: 1.75rem;
-}
-.heroSection .container .title,
-.heroSection .container .image {
-  flex: 1;
-}
-.heroSection .container .title {
-  display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
-.heroSection .container .title h1 {
-  max-width: 600px;
-}
-.heroSection .container .title p {
-  margin-top: 1.5rem;
-  max-width: 600px;
-}
-.heroSection .container .image {
-  overflow: hidden;
-}
-.heroSection .container .image img {
+.home-hero-bg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
-.heroSection .details {
-  display: flex;
-  justify-content: space-between;
-  padding: 50px 0;
+.home-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
 }
-.heroSection .details .card {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  background: #f1f3f6;
-  width: 220px;
-  padding: 10px 20px;
-}
-.heroSection .details .card .icon {
-  font-size: 24px;
-  background: rgb(233, 249, 255);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  color: #2d5649;
-}
-.heroSection .details .card .content p:first-child {
-  font-weight: 600;
-  font-size: 18px;
-}
-.heroSection .details .card .content p:nth-child(2) {
-  font-size: 15px;
-  color: #666;
-  margin-top: 5px;
-}
-.heroSection .details .card:hover {
-  transition: all 0.3s;
-  box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -webkit-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -moz-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-}
-@media (max-width: 1520px) {
-  .heroSection .container,
-  .heroSection .details {
-    min-width: 100%;
-    padding: 20px;
-  }
-}
-@media (max-width: 1000px) {
-  .heroSection .container {
-    flex-direction: column-reverse;
-    position: relative;
-    min-height: 600px;
-  }
-  .heroSection .container .title {
-    z-index: 1;
-    text-align: center;
-  }
-  .heroSection .container .title h1,
-  .heroSection .container .title p {
-    max-width: 100%;
-  }
-  .heroSection .container .image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0.6;
-    width: 100%;
-    height: 100%;
-  }
-}
-@media (max-width: 950px) {
-  .heroSection .details {
-    flex-wrap: wrap;
-    gap: 30px;
-    justify-content: space-evenly;
-  }
-  .heroSection .details .card {
-    width: 300px;
-    flex: none;
-  }
-}
-@media (max-width: 670px) {
-  .heroSection .details .card {
-    max-width: 350px;
-    min-width: 350px;
-  }
-}
-@media (max-width: 400px) {
-  .heroSection .details .card {
-    min-width: 100%;
-    max-width: 100%;
-  }
-}
-.howitworks {
-  background: #f1f3f6;
-}
-.howitworks .container {
-  max-width: 1500px;
-  min-width: 1500px;
-  display: flex;
-  flex-direction: column;
-  margin: 0 auto;
-  align-items: center;
-  padding: 50px 0;
-  gap: 50px;
-}
-.howitworks .container .banner {
-  display: flex;
-  justify-content: space-between;
-  gap: 25px;
-}
-.howitworks .container .banner .card {
-  background: #fff;
-  display: flex;
+.home-hero-text {
+  position: relative;
+  z-index: 1;
   text-align: center;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  height: 350px;
-  padding: 30px 50px;
-  gap: 12px;
-  justify-content: center;
+  max-width: 700px;
+  padding: 0 20px;
 }
-.howitworks .container .banner .card:nth-child(2) {
-  background: #18191c;
+.home-hero-text h1 {
   color: #fff;
+  font-size: 4.5rem;
+  line-height: 1.1;
+  margin-bottom: 24px;
 }
-.howitworks .container .banner .card svg {
-  font-size: 30px;
-  color: #2d5649;
+.home-hero-text h1 span {
+  color: #6fcf97;
 }
-.howitworks .container .banner .card p:last-child {
-  font-size: 15px;
-  color: #666;
+.home-hero-text p {
+  color: #ffffffcc;
+  font-size: 18px;
+  line-height: 1.7;
+  margin-bottom: 35px;
 }
-@media (max-width: 1520px) {
-  .howitworks .container {
-    min-width: 100%;
-    padding: 50px 20px;
-  }
+.home-hero-btn {
+  display: inline-block;
+  background: #2d5649;
+  color: #fff;
+  padding: 16px 40px;
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s;
 }
-@media (max-width: 850px) {
-  .howitworks .container .banner {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .howitworks .container .banner .card {
-    flex: none;
-    width: 400px;
-    height: 320px;
-  }
+.home-hero-btn:hover {
+  background: #1e3d33;
+}
+@media (max-width: 768px) {
+  .home-hero { height: 70vh; min-height: 400px; }
+  .home-hero-text h1 { font-size: 2.8rem; }
 }
 @media (max-width: 480px) {
-  .howitworks .container .banner .card {
-    width: 100%;
-  }
+  .home-hero-text h1 { font-size: 2.2rem; }
+  .home-hero-text p { font-size: 16px; }
 }
 
-.categories {
-  min-width: 1500px;
-  max-width: 1500px;
-  display: flex;
-  flex-direction: column;
+/* ===== MANIFESTO ===== */
+.manifesto {
+  max-width: 900px;
   margin: 0 auto;
-  padding: 50px 0;
-  gap: 35px;
+  padding: 90px 20px;
 }
-.categories .banner {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 35px;
-  padding: 20px 0;
+.manifesto-item {
+  margin-bottom: 60px;
+  padding-left: 70px;
+  position: relative;
 }
-.categories .banner .card {
-  width: 320px;
-  background: red;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f1f3f6;
+.manifesto-item:last-child {
+  margin-bottom: 0;
 }
-.categories .banner .card:hover {
-  transition: all 0.3s;
-  box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -webkit-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -moz-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
+.manifesto-num {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #2d564915;
+  line-height: 1;
 }
-.categories .banner .card .icon {
-  font-size: 24px;
-  padding: 10px;
-  background: rgb(233, 249, 255);
+.manifesto-item h2 {
+  font-size: 2rem;
+  line-height: 1.3;
+  margin-bottom: 12px;
+  color: #18191c;
+}
+.manifesto-item h2 em {
   color: #2d5649;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.categories .banner .card .text p:nth-child(1) {
-  font-size: 17px;
-  font-weight: 600;
-}
-.categories .banner .card .text p:nth-child(2) {
-  font-size: 15px;
+  font-style: normal;
   font-weight: 400;
-  color: #666;
 }
-@media (max-width: 1520px) {
-  .categories {
-    min-width: 100%;
-    padding: 50px 20px;
-  }
+.manifesto-item p {
+  font-size: 17px;
+  color: #555;
+  line-height: 1.7;
+  max-width: 600px;
 }
-@media (max-width: 714px) {
-  .categories {
-    align-items: center;
-  }
-  .categories .banner {
-    justify-content: center;
-  }
-}
-@media (max-width: 350px) {
-  .categories .banner .card {
-    width: 100%;
-  }
+@media (max-width: 600px) {
+  .manifesto { padding: 60px 20px; }
+  .manifesto-item { padding-left: 50px; }
+  .manifesto-num { font-size: 2.2rem; }
+  .manifesto-item h2 { font-size: 1.5rem; }
 }
 
-.companies {
-  background: #f1f3f6;
-  padding: 50px 0;
+/* ===== VOICES — Editorial quotes ===== */
+.voices {
+  background: #f7f8fa;
+  padding: 90px 20px;
 }
-.companies .container {
-  min-width: 1500px;
-  max-width: 1500px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 35px;
+.voices-title {
+  text-align: center;
+  margin-bottom: 60px;
+  font-size: 2.5rem;
+  color: #18191c;
 }
-.companies .container .banner {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  padding: 20px 0;
+.voice-block {
+  max-width: 750px;
+  margin-bottom: 70px;
 }
-.companies .container .banner .card {
-  width: 340px;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  padding: 20px;
-  gap: 15px;
+.voice-block:last-child {
+  margin-bottom: 0;
 }
-.companies .container .banner .card:hover {
-  transition: all 0.3s;
-  box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -webkit-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -moz-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
+.voice-left {
+  margin-left: 10%;
+  margin-right: auto;
 }
-.companies .container .banner .card .content {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+.voice-right {
+  margin-right: 10%;
+  margin-left: auto;
+  text-align: right;
 }
-.companies .container .banner .card .content .icon {
-  padding: 10px;
-  font-size: 24px;
-  color: #2d5649;
-  background: rgb(233, 249, 255);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.companies .container .banner .card .content .text p:first-child {
-  font-weight: 600;
-  font-size: 17px;
-  margin-bottom: 5px;
-}
-.companies .container .banner .card .content .text p:last-child {
-  font-size: 15px;
-  color: #666;
-}
-.companies .container .banner .card button {
-  color: #2d5649;
-  background: rgb(233, 249, 255);
-  font-weight: bold;
-  font-size: 20px;
+.voice-block blockquote {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #18191c;
+  margin: 0 0 20px 0;
+  padding: 0;
   border: none;
-  padding: 7px 0;
-  margin-top: 10px;
 }
-@media (max-width: 1520px) {
-  .companies .container {
-    min-width: 100%;
-    padding: 0 20px;
-  }
+.voice-left blockquote {
+  border-left: 4px solid #2d5649;
+  padding-left: 24px;
 }
-@media (max-width: 1100px) {
-  .companies .container .banner {
-    flex-direction: column;
-    gap: 30px;
-    align-items: center;
-  }
-  .companies .container .banner .card {
-    width: 420px;
-  }
+.voice-right blockquote {
+  border-right: 4px solid #2d5649;
+  padding-right: 24px;
 }
-@media (max-width: 470px) {
-  .companies .container .banner .card {
-    width: 100%;
-  }
+.voice-employer blockquote {
+  border-color: #e8a317;
 }
-.jobs {
-  background: #f1f3f6;
-  min-height: 100vh;
-  padding: 50px 20px;
-}
-.jobs .container {
+.voice-meta {
   display: flex;
-  flex-direction: column;
+  gap: 12px;
   align-items: center;
-  min-width: 1500px;
-  max-width: 1500px;
-  margin: 0 auto;
-  gap: 35px;
-}
-.jobs .container .banner {
-  display: flex;
   flex-wrap: wrap;
-  width: 100%;
-  gap: 30px;
-  justify-content: center;
-  padding: 30px 0;
+  margin-bottom: 12px;
 }
-.jobs .container .banner .card {
-  background: #fff;
-  text-decoration: none;
-  width: 320px;
-  height: 220px;
-  padding: 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  justify-content: center;
+.voice-right .voice-meta {
+  justify-content: flex-end;
 }
-.jobs .container .banner .card:hover {
-  transition: all 0.3s;
-  box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -webkit-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-  -moz-box-shadow: 2px 10px 10px -1px rgba(0, 0, 0, 0.17);
-}
-.jobs .container .banner .card p:first-child {
-  font-weight: 600;
-  font-size: 18px;
-}
-.jobs .container .banner .card p:nth-child(2) {
+.voice-name {
   font-size: 15px;
-  color: #666;
+  font-weight: 700;
+  color: #18191c;
 }
-.jobs .container .banner .card p:last-child {
+.voice-detail {
   font-size: 14px;
   color: #666;
 }
-.jobs .container .banner .card a {
-  text-decoration: none;
-  padding: 7px;
-  font-size: 20px;
+.voice-tag {
+  font-size: 12px;
+  font-weight: 600;
   color: #2d5649;
-  background: rgb(233, 249, 255);
-  width: 100%;
-  display: block;
-  text-align: center;
+  background: #e8f5e9;
+  padding: 3px 12px;
+  border-radius: 20px;
 }
-@media (max-width: 1520px) {
-  .jobs .container {
-    min-width: 100%;
+.voice-tag.employer {
+  color: #b8860b;
+  background: #fff8e1;
+}
+.voice-story {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.7;
+}
+@media (max-width: 768px) {
+  .voice-left, .voice-right {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    max-width: 100%;
+  }
+  .voice-right blockquote {
+    border-right: none;
+    border-left: 4px solid #2d5649;
+    padding-right: 0;
+    padding-left: 24px;
+  }
+  .voice-right .voice-meta {
+    justify-content: flex-start;
+  }
+  .voice-block blockquote {
+    font-size: 1.4rem;
   }
 }
-@media (max-width: 1060px) {
-  .jobs .container .banner .card {
-    width: 360px;
-  }
-}
-@media (max-width: 795px) {
-  .jobs .container .banner .card {
-    width: 100%;
-  }
+@media (max-width: 480px) {
+  .voices { padding: 60px 20px; }
+  .voices-title { font-size: 2rem; }
+  .voice-block blockquote { font-size: 1.2rem; }
 }
 
-.jobDetail {
-  background: #f1f3f6;
-  padding: 50px  20px;
+/* ===== CTA ===== */
+.home-cta {
+  background: #18191c;
+  padding: 80px 20px;
+  text-align: center;
 }
-.jobDetail .container {
-  max-width: 1500px;
-  min-width: 1500px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.home-cta h2 {
+  color: #fff;
+  font-size: 2.5rem;
+  margin-bottom: 30px;
 }
-.jobDetail .container .banner {
-  width: 100%;
-  min-height: 767px;
-  padding: 0px 25px;
+.home-cta-buttons {
   display: flex;
-  flex-direction: column;
-  gap: 25px;
+  gap: 15px;
   justify-content: center;
 }
-.jobDetail .container .banner p {
-  font-weight: bold;
-  color: #2d5649;
-}
-.jobDetail .container .banner p span {
-  color: #18191c;
-  font-weight: 400;
-}
-.jobDetail .container .banner a {
-  background-color: #2d5649;
-  color: rgb(233, 249, 255);
-  font-size: 20px;
-  font-weight: 400;
-  border: none;
-  padding: 12px 30px;
+.cta-main {
+  background: #2d5649;
+  color: #fff;
+  padding: 16px 40px;
   text-decoration: none;
-  margin-top: 10px;
-  width: fit-content;
+  font-size: 17px;
+  font-weight: 600;
+  border-radius: 6px;
 }
-@media (max-width: 1520px) {
-  .jobDetail .container {
-    min-width: 100%;
+.cta-main:hover {
+  background: #1e3d33;
+}
+.cta-ghost {
+  background: transparent;
+  color: #fff;
+  padding: 16px 40px;
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+  border: 2px solid #ffffff44;
+  border-radius: 6px;
+}
+.cta-ghost:hover {
+  border-color: #fff;
+  background: #ffffff10;
+}
+@media (max-width: 480px) {
+  .home-cta h2 { font-size: 1.8rem; }
+  .home-cta-buttons {
+    flex-direction: column;
+    align-items: center;
   }
 }
 .application {

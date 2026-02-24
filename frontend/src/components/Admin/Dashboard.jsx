@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Context } from "../../main";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import "./Dashboard.css";
 
@@ -26,7 +26,7 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const { data } = await axios.get("http://localhost:5000/api/v1/admin/stats", { withCredentials: true });
+      const { data } = await api.get("/admin/stats");
       setStats(data.stats);
       setUsers(data.users || []);
     } catch (err) {

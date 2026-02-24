@@ -1,26 +1,41 @@
+/* Application Form — 2-Column Layout */
+
 .application {
   min-height: 100vh;
-  background: #f5f5f5;
-  padding: 24px 16px;
+  background: #f5f7fa;
+  padding: 48px 20px;
 }
 
 .application .container {
-  max-width: 600px;
+  max-width: 680px;
   margin: 0 auto;
   background: #fff;
-  border-radius: 8px;
-  padding: 32px;
-  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 36px 36px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-top: 4px solid #2d5649;
+}
+
+/* Header */
+
+.application .form-header {
+  margin-bottom: 28px;
 }
 
 .application h1 {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
   color: #1a1a1a;
-  margin: 0 0 28px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e5e5e5;
+  margin: 0 0 6px;
 }
+
+.application .form-desc {
+  font-size: 15px;
+  color: #5a6872;
+  margin: 0;
+}
+
+/* Form */
 
 .application form {
   display: flex;
@@ -28,167 +43,179 @@
   gap: 20px;
 }
 
+/* 2-Column Row */
+
 .application .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 20px;
 }
+
+/* Form Group */
+
+.application .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Labels */
+
+.application label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Inputs / Textarea / Select */
 
 .application input[type="text"],
 .application input[type="email"],
-.application input[type="number"],
+.application input[type="tel"],
 .application textarea,
 .application select {
   width: 100%;
-  padding: 16px 18px;
-  font-size: 17px;
+  padding: 11px 14px;
+  font-size: 15px;
   color: #1a1a1a;
   background: #fff;
-  border: 2px solid #bbb;
-  border-radius: 6px;
+  border: 2px solid #d1d8e0;
+  border-radius: 8px;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
-  transition: border-color 0.2s ease;
+}
+
+.application input::placeholder,
+.application textarea::placeholder {
+  color: #95a5a6;
 }
 
 .application input:focus,
 .application textarea:focus,
 .application select:focus {
   border-color: #2d5649;
-  box-shadow: 0 0 0 3px rgba(45, 86, 73, 0.15);
-}
-
-.application input::placeholder,
-.application textarea::placeholder {
-  color: #999;
+  box-shadow: 0 0 0 3px rgba(45, 86, 73, 0.12);
 }
 
 .application textarea {
-  min-height: 120px;
+  min-height: 130px;
   resize: vertical;
   line-height: 1.6;
 }
 
-.application input[type="number"] {
-  -moz-appearance: textfield;
+/* Select */
+
+.application select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%232c3e50' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px;
+  padding-right: 40px;
 }
 
-.application input[type="number"]::-webkit-outer-spin-button,
-.application input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.application label {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.application label small {
-  font-weight: 400;
-  color: #666;
-}
+/* File Input */
 
 .application input[type="file"] {
-  padding: 16px;
-  font-size: 16px;
-  color: #1a1a1a;
-  background: #f9f9f9;
-  border: 2px dashed #999;
-  border-radius: 6px;
+  padding: 14px;
+  font-size: 14px;
+  background: #f8f9fa;
+  border: 2px dashed #cbd5e0;
+  border-radius: 8px;
   cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .application input[type="file"]:hover {
   border-color: #2d5649;
+  background: #f0fdf8;
 }
 
-.application select {
-  cursor: pointer;
+/* Helper / Error */
+
+.application .field-note {
+  font-size: 13px;
+  color: #7f8c8d;
 }
 
 .application .error-text {
-  color: #c00;
-  font-size: 12px;
-  margin-top: 2px;
+  color: #c0392b;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
 }
+
+.application input[aria-invalid="true"] {
+  border-color: #c0392b;
+  background: #fff5f5;
+}
+
+/* Submit */
 
 .application button[type="submit"] {
   width: 100%;
-  padding: 18px;
-  font-size: 18px;
-  font-weight: 700;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
   color: #fff;
   background: #2d5649;
-  border: 0;
+  border: none;
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 12px;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
 .application button[type="submit"]:hover:not(:disabled) {
-  background: #234a3d;
-  transform: translateY(-1px);
+  background: #3d7a64;
+  box-shadow: 0 2px 10px rgba(45, 86, 73, 0.25);
 }
 
 .application button[type="submit"]:disabled {
-  background: #999;
+  background: #95a5a6;
   cursor: not-allowed;
 }
 
-/* focus states cho keyboard navigation */
+/* Focus-visible */
+
 .application input:focus-visible,
 .application textarea:focus-visible,
-.application select:focus-visible {
-  outline: 4px solid #2d5649;
-  outline-offset: 3px;
-  border-color: #2d5649;
+.application select:focus-visible,
+.application button:focus-visible {
+  outline: 3px solid #2d5649;
+  outline-offset: 2px;
 }
 
-.application input[type="file"]:focus-visible {
-  outline: 4px solid #2d5649;
-  outline-offset: 3px;
-}
+/* Responsive */
 
-.application button[type="submit"]:focus-visible {
-  outline: 4px solid #2d5649;
-  outline-offset: 3px;
-}
+@media (max-width: 768px) {
+  .application {
+    padding: 24px 16px;
+  }
 
-.application .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+  .application .container {
+    padding: 28px 24px;
+  }
 
-.application .field-note {
-  font-size: 12px;
-  color: #666;
-}
+  .application .form-row {
+    grid-template-columns: 1fr;
+  }
 
-.application input[type="tel"] {
-  width: 100%;
-  padding: 16px 18px;
-  font-size: 17px;
-  color: #1a1a1a;
-  background: #fff;
-  border: 2px solid #bbb;
-  border-radius: 6px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s ease;
-}
-
-.application input[type="tel"]:focus {
-  border-color: #2d5649;
-  box-shadow: 0 0 0 3px rgba(45, 86, 73, 0.15);
+  .application h1 {
+    font-size: 22px;
+  }
 }
 
 @media (max-width: 500px) {
-  .application .container { padding: 20px 16px; }
-  .application .form-row { grid-template-columns: 1fr; }
+  .application .container {
+    padding: 24px 18px;
+    border-radius: 8px;
+  }
+
+  .application input,
+  .application textarea,
+  .application select {
+    font-size: 16px;
+  }
 }

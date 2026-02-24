@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { Context } from "../../main";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import "./InterviewSchedule.css";
 
@@ -25,12 +25,10 @@ const InterviewSchedule = () => {
     try {
       const endpoint =
         user.role === "Employer"
-          ? "/api/v1/application/employer/interviews"
-          : "/api/v1/application/jobseeker/interviews";
+          ? "/application/employer/interviews"
+          : "/application/jobseeker/interviews";
 
-      const { data } = await axios.get(`http://localhost:5000${endpoint}`, {
-        withCredentials: true,
-      });
+      const { data } = await api.get(endpoint);
 
       setInterviews(data.interviews || []);
     } catch (error) {
@@ -43,10 +41,9 @@ const InterviewSchedule = () => {
   // job seeker xác nhận hoặc từ chối lịch phỏng vấn
   const handleResponse = async (interviewId, response) => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/application/interview-response/${interviewId}`,
-        { response },
-        { withCredentials: true }
+      await api.put(
+        `/application/interview-response/${interviewId}`,
+        { response }
       );
 
       toast.success(
@@ -130,7 +127,7 @@ const InterviewSchedule = () => {
         ) : (
           <div className="interviews-grid" role="list" aria-labelledby="page-title">
             {interviews.map((interview) => {
-              const jobTitle = interview.jobInfo?.jobTitle || "Vị trí ứng tuyển";
+              const jobTitle = interview.jobId?.title || "Vị trí ứng tuyển";
               return (
                 <article
                   key={interview._id}
@@ -227,7 +224,7 @@ const InterviewSchedule = () => {
                           </a>
                         ) : (
                           interview.interviewSchedule.location ||
-                          interview.jobInfo?.jobLocation
+                          interview.jobId?.location
                         )}
                       </dd>
                     </div>

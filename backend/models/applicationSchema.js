@@ -53,11 +53,6 @@ const applicationSchema = new mongoose.Schema({
       ref: "User",
       required: true,
     },
-    role: {
-      type: String,
-      enum: ["Job Seeker"],
-      required: true,
-    },
   },
   employerID: {
     user: {
@@ -65,30 +60,12 @@ const applicationSchema = new mongoose.Schema({
       ref: "User",
       required: true,
     },
-    role: {
-      type: String,
-      enum: ["Employer"],
-      required: true,
-    },
   },
-  // Lưu thông tin công việc làm dữ liệu cứng (snapshot) để tránh mất data khi job bị xóa
-  jobInfo: {
-    jobId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Job",
-    },
-    jobTitle: {
-      type: String,
-      required: true,
-    },
-    // Thông tin chi tiết công việc (snapshot)
-    jobCategory: String,
-    jobLocation: String,
-    jobCity: String,
-    jobDescription: String,
-    workMode: String,
-    salary: String,
-    deadline: Date,
+  // Reference đến Job (soft delete đảm bảo job luôn tồn tại)
+  jobId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Job",
+    required: true,
   },
   status: {
     type: String,
@@ -124,6 +101,7 @@ const applicationSchema = new mongoose.Schema({
 // Index để tìm kiếm nhanh hơn
 applicationSchema.index({ "applicantID.user": 1 });
 applicationSchema.index({ "employerID.user": 1 });
+applicationSchema.index({ jobId: 1 });
 applicationSchema.index({ status: 1 });
 applicationSchema.index({ "interviewSchedule.date": 1 });
 applicationSchema.index({ createdAt: -1 });
@@ -136,6 +114,6 @@ applicationSchema.index({
 });
 
 // Prevent duplicate applications
-applicationSchema.index({ "applicantID.user": 1, "jobInfo.jobId": 1 }, { unique: true });
+applicationSchema.index({ "applicantID.user": 1, jobId: 1 }, { unique: true });
 
 export const Application = mongoose.model("Application", applicationSchema);

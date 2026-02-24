@@ -4,13 +4,7 @@ import { Notification } from "../models/notificationSchema.js";
 import ErrorHandler from "../middlewares/error.js";
 
 export const getPendingJobs = catchAsyncErrors(async (req, res, next) => {
-  if (req.user.role !== "Admin") {
-    return next(
-      new ErrorHandler("Bạn không có quyền truy cập chức năng này.", 403)
-    );
-  }
-
-  const jobs = await Job.find({ status: "pending" })
+  const jobs = await Job.find({ status: "pending", isDeleted: { $ne: true } })
     .populate("postedBy", "name email");
 
   res.status(200).json({
@@ -20,17 +14,15 @@ export const getPendingJobs = catchAsyncErrors(async (req, res, next) => {
   });
 });
 export const approveJob = catchAsyncErrors(async (req, res, next) => {
-  if (req.user.role !== "Admin") {
-    return next(
-      new ErrorHandler("Bạn không có quyền duyệt tin tuyển dụng.", 403)
-    );
-  }
-
   const { id } = req.params;
   const job = await Job.findById(id);
 
   if (!job) {
     return next(new ErrorHandler("Không tìm thấy công việc.", 404));
+  }
+
+  if (job.isDeleted) {
+    return next(new ErrorHandler("Không thể duyệt tin đã bị xóa.", 400));
   }
 
   job.status = "approved";
@@ -55,12 +47,6 @@ export const approveJob = catchAsyncErrors(async (req, res, next) => {
   });
 });
 export const rejectJob = catchAsyncErrors(async (req, res, next) => {
-  if (req.user.role !== "Admin") {
-    return next(
-      new ErrorHandler("Bạn không có quyền từ chối tin tuyển dụng.", 403)
-    );
-  }
-
   const { id } = req.params;
   const { reason } = req.body;
 
@@ -83,22 +69,20 @@ export const rejectJob = catchAsyncErrors(async (req, res, next) => {
     jobId: job._id,
   });
 
-  // Xóa tin tuyển dụng khỏi database
-  await job.deleteOne();
+  // Soft delete: đánh dấu đã xóa thay vì xóa khỏi DB
+  job.status = "rejected";
+  job.rejectionReason = reason;
+  job.isDeleted = true;
+  job.deletedAt = new Date();
+  await job.save();
 
   res.status(200).json({
     success: true,
-    message: `Đã từ chối và xóa tin tuyển dụng. Lý do: ${reason}`,
+    message: `Đã từ chối tin tuyển dụng. Lý do: ${reason}`,
   });
 });
 
 export const approveManyJobs = catchAsyncErrors(async (req, res, next) => {
-  if (req.user.role !== "Admin") {
-    return next(
-      new ErrorHandler("Bạn không có quyền duyệt tin tuyển dụng.", 403)
-    );
-  }
-
   const { jobIds } = req.body;
 
   if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
@@ -106,7 +90,7 @@ export const approveManyJobs = catchAsyncErrors(async (req, res, next) => {
   }
 
   const result = await Job.updateMany(
-    { _id: { $in: jobIds } },
+    { _id: { $in: jobIds }, isDeleted: { $ne: true } },
     {
       $set: {
         status: "approved",

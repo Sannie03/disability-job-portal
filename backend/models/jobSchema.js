@@ -107,12 +107,22 @@ rejectionReason: {
     type: Date,
     default: Date.now,
   },
-  
+
   // Người đăng
   postedBy: {
     type: mongoose.Schema.ObjectId,
     ref: "User",
     required: true,
+  },
+
+  // Soft delete
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
   },
 });
 
@@ -175,5 +185,8 @@ jobSchema.index({ deadline: 1 });
 jobSchema.index({ status: 1 });
 jobSchema.index({ postedBy: 1 });
 jobSchema.index({ jobPostedOn: -1 });
+jobSchema.index({ isDeleted: 1 });
+// Compound index cho các query phổ biến (public listing, search)
+jobSchema.index({ isDeleted: 1, expired: 1, status: 1 });
 
 export const Job = mongoose.model("Job", jobSchema);

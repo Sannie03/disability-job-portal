@@ -28,13 +28,13 @@ export const errorMiddleware = (err, req, res, next) => {
   }
   
   if (err.name === "JsonWebTokenError") {
-    const message = `Json Web Token is invalid, Try again please!`;
-    error = new ErrorHandler(message, 400);
+    const message = "Token không hợp lệ, vui lòng đăng nhập lại!";
+    error = new ErrorHandler(message, 401);
   }
-  
+
   if (err.name === "TokenExpiredError") {
-    const message = `Jsodn Web Token is expired, Try again please!`;
-    error = new ErrorHandler(message, 400);
+    const message = "Token đã hết hạn, vui lòng đăng nhập lại!";
+    error = new ErrorHandler(message, 401);
   }
 
   return res.status(error.statusCode).json({

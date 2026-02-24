@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { Context } from "../../main";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import "./Settings.css";
 
@@ -92,10 +92,9 @@ const Settings = () => {
         updateData.newPassword = formData.newPassword;
       }
 
-      const { data } = await axios.put(
-        "http://localhost:5000/api/v1/user/update",
-        updateData,
-        { withCredentials: true }
+      const { data } = await api.put(
+        "/user/update",
+        updateData
       );
 
       toast.success(data.message);

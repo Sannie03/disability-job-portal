@@ -7,21 +7,17 @@ import ErrorHandler from "../middlewares/error.js";
 // @route   GET /api/v1/admin/stats
 // @access  Private/Admin
 export const getAdminStats = catchAsyncErrors(async (req, res, next) => {
-  // Verify admin role
-  if (req.user.role !== "Admin") {
-    return next(new ErrorHandler("Only admins can access statistics", 403));
-  }
-
   // Count users by role
   const totalUsers = await User.countDocuments();
   const totalEmployers = await User.countDocuments({ role: "Employer" });
   const totalJobSeekers = await User.countDocuments({ role: "Job Seeker" });
 
-  // Count jobs by approval status
-  const totalJobs = await Job.countDocuments();
-  const pendingJobs = await Job.countDocuments({ approvalStatus: "Pending" });
-  const approvedJobs = await Job.countDocuments({ approvalStatus: "Approved" });
-  const rejectedJobs = await Job.countDocuments({ approvalStatus: "Rejected" });
+  // Count jobs by approval status (không đếm job đã bị xóa)
+  const notDeleted = { isDeleted: { $ne: true } };
+  const totalJobs = await Job.countDocuments(notDeleted);
+  const pendingJobs = await Job.countDocuments({ ...notDeleted, status: "pending" });
+  const approvedJobs = await Job.countDocuments({ ...notDeleted, status: "approved" });
+  const rejectedJobs = await Job.countDocuments({ ...notDeleted, status: "rejected" });
 
   // Get all users with basic info
   const users = await User.find({})

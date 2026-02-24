@@ -9,19 +9,22 @@ import {
   jobseekerGetInterviews,
   interviewResponse,
 } from "../controllers/applicationController.js";
-import { isAuthenticated } from "../middlewares/auth.js";
+import { isAuthenticated, authorizeRoles } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-router.post("/post", isAuthenticated, postApplication);
-router.get("/employer/getall", isAuthenticated, employerGetAllApplications);
-router.get("/jobseeker/getall", isAuthenticated, jobseekerGetAllApplications);
-router.delete("/delete/:id", isAuthenticated, jobseekerDeleteApplication);
-router.put("/update-status/:id", isAuthenticated, updateApplicationStatus);
+// Job Seeker routes
+router.post("/post", isAuthenticated, authorizeRoles("Job Seeker"), postApplication);
+router.get("/jobseeker/getall", isAuthenticated, authorizeRoles("Job Seeker"), jobseekerGetAllApplications);
+router.delete("/delete/:id", isAuthenticated, authorizeRoles("Job Seeker"), jobseekerDeleteApplication);
 
-// Interview routes
-router.get("/employer/interviews", isAuthenticated, employerGetInterviews);
-router.get("/jobseeker/interviews", isAuthenticated, jobseekerGetInterviews);
-router.put("/interview-response/:id", isAuthenticated, interviewResponse);
+// Employer routes
+router.get("/employer/getall", isAuthenticated, authorizeRoles("Employer"), employerGetAllApplications);
+router.put("/update-status/:id", isAuthenticated, authorizeRoles("Employer"), updateApplicationStatus);
+
+// Interview routes 
+router.get("/employer/interviews", isAuthenticated, authorizeRoles("Employer"), employerGetInterviews);
+router.get("/jobseeker/interviews", isAuthenticated, authorizeRoles("Job Seeker"), jobseekerGetInterviews);
+router.put("/interview-response/:id", isAuthenticated, authorizeRoles("Job Seeker"), interviewResponse);
 
 export default router;

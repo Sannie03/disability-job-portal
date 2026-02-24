@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import axios from "axios";
+import api from "../utils/api";
 import toast from "react-hot-toast";
 import { Context } from "../main";
 
@@ -16,10 +16,7 @@ export const NotificationProvider = ({ children }) => {
     if (!isAuthorized) return;
 
     try {
-      const response = await axios.get(
-        "http://localhost:5000/api/v1/notification/my",
-        { withCredentials: true }
-      );
+      const response = await api.get("/notification/my");
 
       const newNotifications = response.data.notifications || [];
       const newUnreadCount = response.data.unreadCount || 0;
@@ -43,10 +40,9 @@ export const NotificationProvider = ({ children }) => {
   // Mark single notification as read
   const markAsRead = async (notificationId) => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/v1/notification/${notificationId}/read`,
-        {},
-        { withCredentials: true }
+      await api.put(
+        `/notification/${notificationId}/read`,
+        {}
       );
 
       // Update local state
@@ -65,11 +61,7 @@ export const NotificationProvider = ({ children }) => {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      await axios.put(
-        "http://localhost:5000/api/v1/notification/read-all",
-        {},
-        { withCredentials: true }
-      );
+      await api.put("/notification/read-all", {});
 
       // Update local state
       setNotifications((prev) =>
@@ -86,10 +78,7 @@ export const NotificationProvider = ({ children }) => {
   // Delete notification
   const deleteNotification = async (notificationId) => {
     try {
-      await axios.delete(
-        `http://localhost:5000/api/v1/notification/${notificationId}`,
-        { withCredentials: true }
-      );
+      await api.delete(`/notification/${notificationId}`);
 
       // Update local state
       const deletedNotif = notifications.find(n => n._id === notificationId);

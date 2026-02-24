@@ -26,13 +26,6 @@ const uploadToCloudinary = (filePath) => {
 };
 
 export const postApplication = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role === "Employer") {
-    return next(
-      new ErrorHandler("Nhà tuyển dụng không được phép truy cập tài nguyên này.", 400)
-    );
-  }
-  
   if (!req.files || Object.keys(req.files).length === 0) {
     return next(new ErrorHandler("Vui lòng tải lên file CV!", 400));
   }
@@ -60,12 +53,12 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
       new ErrorHandler("Loại tệp không hợp lệ. Vui lòng tải lên tệp PNG, JPEG, WEBP, PDF hoặc DOCX.", 400)
     );
   }
-  
+
   try {
     // Check job EXISTS and VALID before uploading to save storage
     const jobDetails = await Job.findById(req.body.jobId);
 
-    if (!jobDetails) {
+    if (!jobDetails || jobDetails.isDeleted) {
       return next(new ErrorHandler("Không tìm thấy công việc!", 404));
     }
 
@@ -82,7 +75,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     // Check duplicate application
     const existingApplication = await Application.findOne({
       "applicantID.user": req.user._id,
-      "jobInfo.jobId": req.body.jobId,
+      jobId: req.body.jobId,
     });
 
     if (existingApplication) {
@@ -98,17 +91,8 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
       console.error("Cloudinary Error");
       return next(new ErrorHandler("Không thể tải lên Resume lên Cloudinary", 500));
     }
-    
-    const { name, email, coverLetter, phone, address, disabilityType, jobId } = req.body;
-    const applicantID = {
-      user: req.user._id,
-      role: "Job Seeker",
-    };
 
-    const employerID = {
-      user: jobDetails.postedBy,
-      role: "Employer",
-    };
+    const { name, email, coverLetter, phone, address, disabilityType, jobId } = req.body;
 
     if (
       !name ||
@@ -117,19 +101,10 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
       !phone ||
       !address ||
       !disabilityType ||
-      !applicantID ||
-      !employerID ||
+      !jobId ||
       !resume
     ) {
       return next(new ErrorHandler("Vui lòng điền đầy đủ thông tin.", 400));
-    }
-
-    // Tạo salary string từ job details
-    let salaryString = "";
-    if (jobDetails.fixedSalary) {
-      salaryString = `${jobDetails.fixedSalary.toLocaleString('vi-VN')} VNĐ`;
-    } else if (jobDetails.salaryFrom && jobDetails.salaryTo) {
-      salaryString = `${jobDetails.salaryFrom.toLocaleString('vi-VN')} - ${jobDetails.salaryTo.toLocaleString('vi-VN')} VNĐ`;
     }
 
     const application = await Application.create({
@@ -139,20 +114,9 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
       phone,
       address,
       disabilityType,
-      applicantID,
-      employerID,
-      jobInfo: {
-        jobId: jobDetails._id,
-        jobTitle: jobDetails.title,
-        // Lưu snapshot của job để tránh mất data khi job bị xóa
-        jobCategory: jobDetails.category,
-        jobLocation: jobDetails.location,
-        jobCity: jobDetails.city,
-        jobDescription: jobDetails.description,
-        workMode: jobDetails.workMode,
-        salary: salaryString,
-        deadline: jobDetails.deadline,
-      },
+      applicantID: { user: req.user._id },
+      employerID: { user: jobDetails.postedBy },
+      jobId: jobDetails._id,
       resume: {
         public_id: cloudinaryResponse.public_id,
         url: cloudinaryResponse.secure_url,
@@ -168,10 +132,9 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
         message: `${name} đã nộp đơn ứng tuyển cho vị trí "${jobDetails.title}"`,
         jobId: jobId,
       });
-      console.log("✅ Thông báo đã được tạo cho nhà tuyển dụng:", notification._id);
+      console.log("Thông báo đã được tạo cho nhà tuyển dụng:", notification._id);
     } catch (notifError) {
-      console.error("❌ Lỗi khi tạo thông báo:", notifError);
-      // Không throw error để không làm gián đoạn quá trình nộp đơn
+      console.error("Lỗi khi tạo thông báo:", notifError);
     }
 
     res.status(200).json({
@@ -185,7 +148,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
       console.error("Lỗi khóa API Cloudinary:", error.message);
       return next(new ErrorHandler("Lỗi cấu hình dịch vụ tải lên tệp", 500));
     }
-    
+
     // Handle any other errors
     return next(error);
   }
@@ -193,15 +156,10 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
 
 export const employerGetAllApplications = catchAsyncErrors(
   async (req, res, next) => {
-    const { role } = req.user;
-    if (role === "Job Seeker") {
-      return next(
-        new ErrorHandler("Ứng viên không được phép truy cập tài nguyên này.", 400)
-      );
-    }
     const { _id } = req.user;
     const applications = await Application.find({ "employerID.user": _id })
       .populate("applicantID.user", "name email phone")
+      .populate("jobId", "title category location city description workMode fixedSalary salaryFrom salaryTo deadline")
       .sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
@@ -212,14 +170,9 @@ export const employerGetAllApplications = catchAsyncErrors(
 
 export const jobseekerGetAllApplications = catchAsyncErrors(
   async (req, res, next) => {
-    const { role } = req.user;
-    if (role === "Employer") {
-      return next(
-        new ErrorHandler("Nhà tuyển dụng không được phép truy cập tài nguyên này.", 400)
-      );
-    }
     const { _id } = req.user;
     const applications = await Application.find({ "applicantID.user": _id })
+      .populate("jobId", "title category location city workMode fixedSalary salaryFrom salaryTo deadline")
       .sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
@@ -230,12 +183,6 @@ export const jobseekerGetAllApplications = catchAsyncErrors(
 
 export const jobseekerDeleteApplication = catchAsyncErrors(
   async (req, res, next) => {
-    const { role } = req.user;
-    if (role === "Employer") {
-      return next(
-        new ErrorHandler("Nhà tuyển dụng không được phép truy cập tài nguyên này.", 400)
-      );
-    }
     const { id } = req.params;
     const application = await Application.findById(id);
     if (!application) {
@@ -259,17 +206,10 @@ export const jobseekerDeleteApplication = catchAsyncErrors(
 
 export const updateApplicationStatus = catchAsyncErrors(
   async (req, res, next) => {
-    const { role } = req.user;
-    if (role !== "Employer") {
-      return next(
-        new ErrorHandler("Chỉ nhà tuyển dụng mới được phép thực hiện hành động này.", 400)
-      );
-    }
-
     const { id } = req.params;
     const { status, interviewDate, interviewTime, interviewMode, interviewLocation } = req.body;
 
-    const application = await Application.findById(id);
+    const application = await Application.findById(id).populate("jobId", "title location");
     if (!application) {
       return next(new ErrorHandler("Không tìm thấy đơn xin việc!", 404));
     }
@@ -307,17 +247,15 @@ export const updateApplicationStatus = catchAsyncErrors(
       // Lấy thông tin employer để gửi thông báo
       const employerDetails = await User.findById(req.user._id);
 
-      // Sử dụng job details từ application (data cứng) thay vì query lại
-      const jobTitle = application.jobInfo.jobTitle;
-      const jobLocation = application.jobInfo.jobLocation;
+      // Lấy job details từ populate
+      const jobTitle = application.jobId?.title || "Không rõ vị trí";
+      const jobLocation = application.jobId?.location || "";
 
       if (status === "accepted" || application.status === "scheduled") {
         if (interviewDate && interviewTime) {
-          // CHỈ gửi notification khi có đầy đủ thông tin lịch phỏng vấn
           notificationType = "interview_scheduled";
           notificationTitle = "Lịch phỏng vấn đã được xếp";
 
-          // Định dạng ngày tháng
           const formattedDate = new Date(interviewDate).toLocaleDateString("vi-VN", {
             weekday: "long",
             year: "numeric",
@@ -325,27 +263,25 @@ export const updateApplicationStatus = catchAsyncErrors(
             day: "numeric",
           });
 
-          // Tạo message với thông tin đầy đủ
-          const interviewModeText = interviewMode === "Online" ? "🌐 Online" : "🏢 Trực tiếp";
+          const interviewModeText = interviewMode === "Online" ? "Online" : "Trực tiếp";
 
           notificationMessage = `Chúc mừng! Bạn đã được mời phỏng vấn cho vị trí "${jobTitle}".\n\n`;
-          notificationMessage += `📅 Thời gian: ${formattedDate} lúc ${interviewTime}\n`;
-          notificationMessage += `📍 Hình thức: ${interviewModeText}\n`;
+          notificationMessage += `Thời gian: ${formattedDate} lúc ${interviewTime}\n`;
+          notificationMessage += `Hình thức: ${interviewModeText}\n`;
 
           if (interviewMode === "Online") {
-            notificationMessage += `🔗 Link phỏng vấn: ${interviewLocation}\n`;
+            notificationMessage += `Link phỏng vấn: ${interviewLocation}\n`;
           } else {
-            notificationMessage += `📍 Địa điểm: ${interviewLocation || jobLocation || "Sẽ được thông báo sau"}\n`;
+            notificationMessage += `Địa điểm: ${interviewLocation || jobLocation || "Sẽ được thông báo sau"}\n`;
           }
 
-          notificationMessage += `🏢 Nhà tuyển dụng: ${employerDetails?.name || "Nhà tuyển dụng"}\n`;
-          notificationMessage += `📧 Email liên hệ: ${employerDetails?.email || req.user.email}\n`;
+          notificationMessage += `Nhà tuyển dụng: ${employerDetails?.name || "Nhà tuyển dụng"}\n`;
+          notificationMessage += `Email liên hệ: ${employerDetails?.email || req.user.email}\n`;
           if (employerDetails?.phone) {
-            notificationMessage += `📞 Số điện thoại: ${employerDetails.phone}\n`;
+            notificationMessage += `Số điện thoại: ${employerDetails.phone}\n`;
           }
           notificationMessage += `\nVui lòng chuẩn bị kỹ lưỡng và đến đúng giờ. Chúc bạn thành công!`;
 
-          // Lưu chi tiết phỏng vấn vào notification
           interviewDetails = {
             date: interviewDate,
             time: interviewTime,
@@ -357,7 +293,6 @@ export const updateApplicationStatus = catchAsyncErrors(
             employerPhone: employerDetails?.phone || "",
           };
         } else {
-          // Chỉ accept mà chưa schedule
           notificationType = "application_accepted";
           notificationTitle = "Đơn ứng tuyển được chấp nhận";
           notificationMessage = `Chúc mừng! Đơn ứng tuyển của bạn cho vị trí "${jobTitle}" đã được chấp nhận. Nhà tuyển dụng sẽ sớm liên hệ với bạn.`;
@@ -374,19 +309,18 @@ export const updateApplicationStatus = catchAsyncErrors(
           type: notificationType,
           title: notificationTitle,
           message: notificationMessage,
-          jobId: application.jobInfo.jobId,
+          jobId: application.jobId?._id || application.jobId,
         };
 
-        // Thêm interviewDetails nếu có
         if (interviewDetails) {
           notificationData.interviewDetails = interviewDetails;
         }
 
         await Notification.create(notificationData);
-        console.log("✅ Thông báo đã được gửi cho ứng viên:", application.applicantID.user);
+        console.log("Thông báo đã được gửi cho ứng viên:", application.applicantID.user);
       }
     } catch (notifError) {
-      console.error("❌ Lỗi khi tạo thông báo:", notifError);
+      console.error("Lỗi khi tạo thông báo:", notifError);
     }
 
     res.status(200).json({
@@ -399,16 +333,13 @@ export const updateApplicationStatus = catchAsyncErrors(
 
 // Lấy danh sách lịch phỏng vấn cho Employer
 export const employerGetInterviews = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role !== "Employer") {
-    return next(new ErrorHandler("Chỉ nhà tuyển dụng mới được truy cập.", 403));
-  }
-
   const interviews = await Application.find({
     "employerID.user": req.user._id,
     status: { $in: ["accepted", "scheduled"] },
     "interviewSchedule.date": { $exists: true },
-  }).sort({ "interviewSchedule.date": 1 });
+  })
+    .populate("jobId", "title location")
+    .sort({ "interviewSchedule.date": 1 });
 
   res.status(200).json({
     success: true,
@@ -418,17 +349,13 @@ export const employerGetInterviews = catchAsyncErrors(async (req, res, next) => 
 
 // Lấy danh sách lịch phỏng vấn cho Job Seeker
 export const jobseekerGetInterviews = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role !== "Job Seeker") {
-    return next(new ErrorHandler("Chỉ ứng viên mới được truy cập.", 403));
-  }
-
   const interviews = await Application.find({
     "applicantID.user": req.user._id,
     status: { $in: ["accepted", "scheduled"] },
     "interviewSchedule.date": { $exists: true },
   })
     .populate("employerID.user", "name email phone")
+    .populate("jobId", "title location")
     .sort({ "interviewSchedule.date": 1 });
 
   res.status(200).json({
@@ -439,11 +366,6 @@ export const jobseekerGetInterviews = catchAsyncErrors(async (req, res, next) =>
 
 // Ứng viên phản hồi lịch phỏng vấn
 export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
-  if (role !== "Job Seeker") {
-    return next(new ErrorHandler("Chỉ ứng viên mới được phản hồi lịch phỏng vấn.", 403));
-  }
-
   const { id } = req.params;
   const { response } = req.body; // 'confirmed' hoặc 'declined'
 
@@ -451,7 +373,7 @@ export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Phản hồi không hợp lệ.", 400));
   }
 
-  const application = await Application.findById(id);
+  const application = await Application.findById(id).populate("jobId", "title");
   if (!application) {
     return next(new ErrorHandler("Không tìm thấy lịch phỏng vấn.", 404));
   }
@@ -464,6 +386,8 @@ export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
   application.interviewResponse = response;
   await application.save();
 
+  const jobTitle = application.jobId?.title || "Không rõ vị trí";
+
   // Tạo thông báo cho nhà tuyển dụng
   try {
     await Notification.create({
@@ -475,12 +399,12 @@ export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
           : "Ứng viên từ chối phỏng vấn",
       message:
         response === "confirmed"
-          ? `${application.name} đã xác nhận tham gia phỏng vấn cho vị trí "${application.jobInfo.jobTitle}" vào ${new Date(application.interviewSchedule.date).toLocaleDateString("vi-VN")} lúc ${application.interviewSchedule.time}.`
-          : `${application.name} đã từ chối lịch phỏng vấn cho vị trí "${application.jobInfo.jobTitle}". Vui lòng liên hệ ứng viên để sắp xếp lại.`,
-      jobId: application.jobInfo.jobId,
+          ? `${application.name} đã xác nhận tham gia phỏng vấn cho vị trí "${jobTitle}" vào ${new Date(application.interviewSchedule.date).toLocaleDateString("vi-VN")} lúc ${application.interviewSchedule.time}.`
+          : `${application.name} đã từ chối lịch phỏng vấn cho vị trí "${jobTitle}". Vui lòng liên hệ ứng viên để sắp xếp lại.`,
+      jobId: application.jobId?._id || application.jobId,
     });
   } catch (notifError) {
-    console.error("❌ Lỗi khi tạo thông báo:", notifError);
+    console.error("Lỗi khi tạo thông báo:", notifError);
   }
 
   res.status(200).json({
