@@ -16,42 +16,50 @@ const MyApplications = () => {
   const navigateTo = useNavigate();
 
   useEffect(() => {
-    try {
-      if (user && user.role === "Employer") {
-        api
-          .get("/application/employer/getall")
-          .then((res) => {
-            setApplications(res.data.applications);
-          });
-      } else {
-        api
-          .get("/application/jobseeker/getall")
-          .then((res) => {
-            setApplications(res.data.applications);
-          });
-      }
-    } catch (error) {
-      toast.error(error.response.data.message);
-    }
-  }, [isAuthorized]);
+    if (!isAuthorized || !user) return;
 
-  if (!isAuthorized) {
-    navigateTo("/");
-  }
+    const url = user.role === "Employer"
+      ? "/application/employer/getall"
+      : "/application/jobseeker/getall";
+
+    api.get(url)
+      .then((res) => {
+        setApplications(res.data.applications);
+      })
+      .catch((error) => {
+        console.error("[MyApplications] Lỗi tải đơn:", error.response?.status, error.response?.data);
+        toast.error(error.response?.data?.message || "Không thể tải đơn ứng tuyển");
+      });
+  }, [isAuthorized, user]);
+
+  useEffect(() => {
+    if (!isAuthorized) {
+      navigateTo("/");
+    }
+  }, [isAuthorized, navigateTo]);
 
   const deleteApplication = (id) => {
-    try {
-      api
-        .delete(`/application/delete/${id}`)
-        .then((res) => {
-          toast.success(res.data.message);
-          setApplications((prevApplication) =>
-            prevApplication.filter((application) => application._id !== id)
-          );
-        });
-    } catch (error) {
-      toast.error(error.response.data.message);
-    }
+    // Tìm jobId của application đang xóa (để dọn localStorage)
+    const app = applications.find((a) => a._id === id);
+    const jobId = app?.jobId?._id || app?.jobId;
+
+    api
+      .delete(`/application/delete/${id}`)
+      .then((res) => {
+        toast.success(res.data.message);
+        setApplications((prevApplication) =>
+          prevApplication.filter((application) => application._id !== id)
+        );
+        // Dọn localStorage để JobDetails không còn hiện "Đã nộp đơn"
+        if (jobId) {
+          const appliedJobs = JSON.parse(localStorage.getItem("appliedJobs") || "[]");
+          const updated = appliedJobs.filter((jId) => jId !== jobId);
+          localStorage.setItem("appliedJobs", JSON.stringify(updated));
+        }
+      })
+      .catch((error) => {
+        toast.error(error.response?.data?.message || "Xóa đơn thất bại");
+      });
   };
 
   const openModal = (imageUrl) => {
@@ -172,18 +180,34 @@ const JobSeekerCard = ({ element, deleteApplication, openModal }) => {
             <dd>{element.address}</dd>
           </div>
           <div className="info-row">
+            <dt>Loại khuyết tật:</dt>
+            <dd>{element.disabilityType || 'Không có'}</dd>
+          </div>
+          <div className="info-row">
             <dt>Thư xin việc:</dt>
             <dd>{element.coverLetter}</dd>
           </div>
         </dl>
       </div>
       <div className="btn_area">
-        <button
-          onClick={() => deleteApplication(element._id)}
-          aria-label={`Xóa đơn ứng tuyển vị trí ${jobTitle}`}
-        >
-          Xóa đơn ứng tuyển
-        </button>
+        {(() => {
+          if (element.interviewSchedule?.date) {
+            const interviewDate = new Date(element.interviewSchedule.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (today <= interviewDate) {
+              return <span className="scheduled-note">Đã có lịch phỏng vấn</span>;
+            }
+          }
+          return (
+            <button
+              onClick={() => deleteApplication(element._id)}
+              aria-label={`Xóa đơn ứng tuyển vị trí ${jobTitle}`}
+            >
+              Xóa đơn ứng tuyển
+            </button>
+          );
+        })()}
       </div>
     </article>
   );
@@ -232,8 +256,8 @@ const EmployerCard = ({ element, openModal }) => {
       toast.error('Vui lòng chọn ngày và giờ phỏng vấn');
       return;
     }
-    if (!interviewLocation) {
-      toast.error('Vui lòng nhập địa điểm/link phỏng vấn');
+    if (interviewMode !== 'ASL' && !interviewLocation) {
+      toast.error(interviewMode === 'Online' ? 'Vui lòng nhập link phỏng vấn' : 'Vui lòng nhập địa điểm phỏng vấn');
       return;
     }
 
@@ -245,7 +269,7 @@ const EmployerCard = ({ element, openModal }) => {
           interviewDate,
           interviewTime,
           interviewMode,
-          interviewLocation,
+          interviewLocation: interviewMode === 'ASL' ? 'Phỏng vấn ASL trực tuyến' : interviewLocation,
         }
       );
       setStatus('scheduled');
@@ -318,7 +342,14 @@ const EmployerCard = ({ element, openModal }) => {
           </div>
           <div className="info-row">
             <dt>Loại khuyết tật:</dt>
-            <dd>{element.disabilityType || 'Không có'}</dd>
+            <dd>
+              {element.disabilityType || 'Không có'}
+              {(element.requestASL || (element.disabilityType && element.disabilityType.toLowerCase().includes('khiếm thính'))) && (
+                <span style={{ color: '#7c3aed', fontWeight: 600, marginLeft: 6 }}>
+                  — {element.requestASL ? 'Yêu cầu ASL' : 'Nên dùng ASL'}
+                </span>
+              )}
+            </dd>
           </div>
           <div className="info-row">
             <dt>Thư xin việc:</dt>
@@ -367,24 +398,44 @@ const EmployerCard = ({ element, openModal }) => {
               onChange={(e) => setInterviewMode(e.target.value)}
               required
             >
-              <option value="Online">Online</option>
+              <option value="Online">Online (Link meet)</option>
+              <option value="ASL">Online (ASL - ứng viên yêu cầu)</option>
               <option value="Offline">Offline (Trực tiếp)</option>
             </select>
           </div>
-          <div className="form-row">
-            <label htmlFor={`${formId}-location`}>
-              {interviewMode === 'Online' ? 'Link phỏng vấn:' : 'Địa điểm:'}
-            </label>
-            <input
-              id={`${formId}-location`}
-              type="text"
-              placeholder={interviewMode === 'Online' ? 'VD: https://meet.google.com/xxx' : 'VD: 123 Nguyễn Huệ, Q1, HCM'}
-              value={interviewLocation}
-              onChange={(e) => setInterviewLocation(e.target.value)}
-              required
-              aria-required="true"
-            />
-          </div>
+          {interviewMode === 'Online' && (
+            <div className="form-row">
+              <label htmlFor={`${formId}-location`}>Link phỏng vấn:</label>
+              <input
+                id={`${formId}-location`}
+                type="text"
+                placeholder="VD: https://meet.google.com/xxx"
+                value={interviewLocation}
+                onChange={(e) => setInterviewLocation(e.target.value)}
+                required
+                aria-required="true"
+              />
+            </div>
+          )}
+          {interviewMode === 'Offline' && (
+            <div className="form-row">
+              <label htmlFor={`${formId}-location`}>Địa điểm:</label>
+              <input
+                id={`${formId}-location`}
+                type="text"
+                placeholder="VD: 123 Nguyễn Huệ, Q1, HCM"
+                value={interviewLocation}
+                onChange={(e) => setInterviewLocation(e.target.value)}
+                required
+                aria-required="true"
+              />
+            </div>
+          )}
+          {interviewMode === 'ASL' && (
+            <p style={{ fontSize: '0.9rem', color: '#666', margin: '0.5rem 0' }}>
+              Phỏng vấn sẽ sử dụng phòng ASL trực tuyến trên hệ thống (do ứng viên yêu cầu).
+            </p>
+          )}
         </div>
       )}
 
@@ -431,7 +482,13 @@ const EmployerCard = ({ element, openModal }) => {
         {status === 'scheduled' && element.interviewSchedule && (
           <div className="interview-info" role="region" aria-label="Thông tin lịch phỏng vấn">
             <div>Ngày: {element.interviewSchedule.date} lúc {element.interviewSchedule.time}</div>
-            <div>{element.interviewSchedule.mode}: {element.interviewSchedule.location}</div>
+            <div>
+              {element.interviewSchedule.mode === 'ASL'
+                ? 'Hình thức: Phỏng vấn ASL trực tuyến'
+                : element.interviewSchedule.mode === 'Online'
+                  ? `Link: ${element.interviewSchedule.location}`
+                  : `Địa điểm: ${element.interviewSchedule.location}`}
+            </div>
           </div>
         )}
       </div>

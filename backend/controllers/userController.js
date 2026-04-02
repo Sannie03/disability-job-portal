@@ -6,18 +6,18 @@ import { sendToken } from "../utils/jwtToken.js";
 export const register = catchAsyncErrors(async (req, res, next) => {
   const { name, email, phone, password, role } = req.body;
   if (!name || !email || !phone || !password || !role) {
-    return next(new ErrorHandler("Vui lòng điền đầy đủ thông tin!"));
+    return next(new ErrorHandler("Vui lòng điền đầy đủ thông tin!", 400));
   }
-  
+
   // Validate phone (giữ dạng chuỗi để không mất số 0 ở đầu)
   const phoneString = phone?.toString().trim();
   if (!/^\d{10}$/.test(phoneString)) {
-    return next(new ErrorHandler("Vui lòng nhập số điện thoại hợp lệ (10 số)!"));
+    return next(new ErrorHandler("Vui lòng nhập số điện thoại hợp lệ (10 số)!", 400));
   }
-  
+
   const isEmail = await User.findOne({ email });
   if (isEmail) {
-    return next(new ErrorHandler("Email đã được đăng ký!"));
+    return next(new ErrorHandler("Email đã được đăng ký!", 400));
   }
   
   try {
@@ -30,21 +30,21 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     });
     
     if (!user) {
-      return next(new ErrorHandler("Không thể tạo tài khoản. Vui lòng thử lại!"));
+      return next(new ErrorHandler("Không thể tạo tài khoản. Vui lòng thử lại!", 500));
     }
     
     console.log("✓ User created successfully:", user.email);
     sendToken(user, 201, res, "Người dùng đã đăng ký thành công!");
   } catch (error) {
     console.error("✗ Error creating user:", error.message);
-    return next(new ErrorHandler("Lỗi khi tạo tài khoản: " + error.message));
+    return next(new ErrorHandler("Lỗi khi tạo tài khoản: " + error.message, 500));
   }
 });
 
 export const login = catchAsyncErrors(async (req, res, next) => {
   const { email, password, role } = req.body;
   if (!email || !password || !role) {
-    return next(new ErrorHandler("Vui lòng cung cấp email, mật khẩu và vai trò!"));
+    return next(new ErrorHandler("Vui lòng cung cấp email, mật khẩu và vai trò!", 400));
   }
   const user = await User.findOne({ email }).select("+password");
   if (!user) {
@@ -59,7 +59,7 @@ export const login = catchAsyncErrors(async (req, res, next) => {
       new ErrorHandler(`Người dùng với email và vai trò ${role} không tìm thấy!`, 404)
     );
   }
-  sendToken(user, 201, res, "Người dùng đã đăng nhập thành công!");
+  sendToken(user, 200, res, "Người dùng đã đăng nhập thành công!");
 });
 
 // Đăng nhập/đăng ký qua Google
@@ -69,12 +69,12 @@ export const googleLogin = catchAsyncErrors(async (req, res, next) => {
   console.log("Google login request:", { tokenId: tokenId ? "có" : "không", role });
 
   if (!tokenId) {
-    return next(new ErrorHandler("Thiếu token từ Google!"));
+    return next(new ErrorHandler("Thiếu token từ Google!", 400));
   }
 
   // Không cho phép đăng nhập Google với vai trò Admin
   if (role === "Admin") {
-    return next(new ErrorHandler("Không thể đăng nhập Google với vai trò Quản trị viên!"));
+    return next(new ErrorHandler("Không thể đăng nhập Google với vai trò Quản trị viên!", 403));
   }
 
   try {
@@ -95,7 +95,7 @@ export const googleLogin = catchAsyncErrors(async (req, res, next) => {
     console.log("Google user info:", { email, name, googleId });
 
     if (!email || !name || !googleId) {
-      return next(new ErrorHandler("Không thể lấy thông tin từ Google!"));
+      return next(new ErrorHandler("Không thể lấy thông tin từ Google!", 400));
     }
 
     // Kiểm tra email đã tồn tại chưa
@@ -107,20 +107,20 @@ export const googleLogin = catchAsyncErrors(async (req, res, next) => {
       // Nếu tài khoản được tạo bằng local auth → không cho đăng nhập Google
       if (user.authProvider === "local") {
         return next(
-          new ErrorHandler("Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu.")
+          new ErrorHandler("Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu.", 400)
         );
       }
 
       // Nếu tài khoản được tạo bằng Google nhưng googleId khác → không cho
       if (user.googleId && user.googleId !== googleId) {
         return next(
-          new ErrorHandler("Email này đã được liên kết với tài khoản Google khác!")
+          new ErrorHandler("Email này đã được liên kết với tài khoản Google khác!", 400)
         );
       }
 
       // Không cho phép user có role Admin đăng nhập bằng Google
       if (user.role === "Admin") {
-        return next(new ErrorHandler("Quản trị viên không thể đăng nhập bằng Google!"));
+        return next(new ErrorHandler("Quản trị viên không thể đăng nhập bằng Google!", 403));
       }
 
       // Nếu tài khoản Google đã tồn tại → cập nhật googleId nếu chưa có
@@ -143,13 +143,13 @@ export const googleLogin = catchAsyncErrors(async (req, res, next) => {
     sendToken(user, 201, res, "Đăng nhập Google thành công!");
   } catch (error) {
     console.error("Google login error:", error);
-    return next(new ErrorHandler("Token Google không hợp lệ!"));
+    return next(new ErrorHandler("Token Google không hợp lệ!", 401));
   }
 });
 
 export const logout = catchAsyncErrors(async (req, res, next) => {
   res
-    .status(201)
+    .status(200)
     .cookie("token", "", {
       httpOnly: true,
       expires: new Date(Date.now()),
@@ -173,7 +173,7 @@ export const getUser = catchAsyncErrors((req, res, next) => {
 // @route   PUT /api/v1/user/update
 // @access  Private
 export const updateProfile = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, phone, currentPassword, newPassword, companyInfo } = req.body;
+  const { name, email, phone, currentPassword, newPassword, companyInfo, disabilityType, customDisabilityDetail } = req.body;
 
   // Find user with password field
   const user = await User.findById(req.user.id).select("+password");
@@ -222,11 +222,26 @@ export const updateProfile = catchAsyncErrors(async (req, res, next) => {
 
     user.companyInfo = {
       companyName: companyInfo.companyName?.trim() || "",
-      companySize: companyInfo.companySize || "",
+      companySize: companyInfo.companySize || undefined,
       website: companyInfo.website?.trim() || "",
       address: companyInfo.address?.trim() || "",
       description: companyInfo.description?.trim() || "",
     };
+  }
+
+  // Update disability info for Job Seeker
+  if (user.role === "Job Seeker" && disabilityType !== undefined) {
+    user.disabilityType = disabilityType;
+
+    if (disabilityType === "Khác") {
+      const trimmed = (customDisabilityDetail || "").trim();
+      if (!trimmed || trimmed.length < 2 || trimmed.length > 50) {
+        return next(new ErrorHandler("Chi tiết khuyết tật phải từ 2 đến 50 ký tự", 400));
+      }
+      user.customDisabilityDetail = trimmed;
+    } else {
+      user.customDisabilityDetail = "";
+    }
   }
 
   // Update password if provided
@@ -268,6 +283,8 @@ export const updateProfile = catchAsyncErrors(async (req, res, next) => {
       role: user.role,
       authProvider: user.authProvider,
       companyInfo: user.companyInfo,
+      disabilityType: user.disabilityType,
+      customDisabilityDetail: user.customDisabilityDetail,
     },
   });
 });

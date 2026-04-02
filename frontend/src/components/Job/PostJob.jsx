@@ -3,6 +3,7 @@ import api from "../../utils/api"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import { Context } from "../../main"
+import { JOB_DISABILITY_OPTIONS } from "../../utils/constants"
 import "./PostJob.css"
 
 const CATEGORIES = [
@@ -31,13 +32,7 @@ const SALARY_TYPES = [
   { value: "Ranged Salary", label: "Theo khoảng" },
 ]
 
-const DISABILITIES = [
-  { value: "Khiếm thị", label: "Khiếm thị" },
-  { value: "Khiếm thính", label: "Khiếm thính" },
-  { value: "Vận động", label: "Vận động" },
-  { value: "Giao tiếp", label: "Giao tiếp" },
-  { value: "Khác", label: "Khác" },
-]
+const DISABILITIES = JOB_DISABILITY_OPTIONS
 
 const PROVINCES = [
   "Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ",
@@ -149,6 +144,7 @@ const PostJob = () => {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customDisability, setCustomDisability] = useState("")
 
   // redirect nếu không phải employer
   useEffect(() => {
@@ -193,6 +189,7 @@ const PostJob = () => {
       { condition: salaryType === "Ranged Salary" && (!salaryFrom || !salaryTo), message: "Vui lòng nhập đầy đủ khoảng lương!" },
       { condition: salaryType === "Ranged Salary" && Number(salaryFrom) >= Number(salaryTo), message: "Lương từ phải nhỏ hơn lương đến!" },
       { condition: isDisabilityFriendly && supportedDisabilities.length === 0, message: "Vui lòng chọn ít nhất một loại khiếm khuyết!" },
+      { condition: isDisabilityFriendly && supportedDisabilities.includes("Khác") && !customDisability.trim(), message: "Vui lòng nhập loại khuyết tật khác!" },
     ]
 
     for (const { condition, message } of validations) {
@@ -202,7 +199,7 @@ const PostJob = () => {
       }
     }
     return true
-  }, [formData])
+  }, [formData, customDisability])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -226,7 +223,9 @@ const PostJob = () => {
       workTime: isFlexibleTime ? null : { start: workStartTime, end: workEndTime },
       deadline,
       isDisabilityFriendly,
-      supportedDisabilities,
+      supportedDisabilities: supportedDisabilities.includes("Khác") && customDisability
+        ? [...supportedDisabilities.filter(d => d !== "Khác"), customDisability]
+        : supportedDisabilities,
       ...(salaryType === "Fixed Salary" && { fixedSalary }),
       ...(salaryType === "Ranged Salary" && { salaryFrom, salaryTo }),
     }
@@ -302,6 +301,16 @@ const PostJob = () => {
                       {label}
                     </label>
                   ))}
+                  {formData.supportedDisabilities.includes("Khác") && (
+                    <input
+                      type="text"
+                      placeholder="Nhập loại khuyết tật khác"
+                      value={customDisability}
+                      onChange={(e) => setCustomDisability(e.target.value)}
+                      required
+                      style={{ marginTop: "0.5rem", width: "100%" }}
+                    />
+                  )}
                 </div>
               )}
             </div>

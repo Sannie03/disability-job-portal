@@ -16,6 +16,7 @@ const applicationSchema = new mongoose.Schema({
   coverLetter: {
     type: String,
     required: [true, "Vui lòng cung cấp thư xin việc!"],
+    maxLength: [5000, "Thư xin việc không được vượt quá 5000 ký tự!"],
   },
   phone: {
     type: String,
@@ -30,12 +31,17 @@ const applicationSchema = new mongoose.Schema({
   address: {
     type: String,
     required: [true, "Vui lòng nhập địa chỉ của bạn!"],
+    maxLength: [200, "Địa chỉ không được vượt quá 200 ký tự!"],
   },
-  // Thông tin khuyết tật của ứng viên
+  // Thông tin khuyết tật của ứng viên (không bắt buộc — người bình thường có thể bỏ trống)
   disabilityType: {
     type: String,
-    enum: ["Không có", "Khiếm thị", "Khiếm thính", "Vận động", "Khác"],
-    required: [true, "Vui lòng chọn loại khiếm khuyết!"],
+    default: "",
+  },
+  // Ứng viên yêu cầu phỏng vấn bằng ngôn ngữ ký hiệu (ASL)
+  requestASL: {
+    type: Boolean,
+    default: false,
   },
   resume: {
     public_id: {
@@ -81,7 +87,7 @@ const applicationSchema = new mongoose.Schema({
     },
     mode: {
       type: String,
-      enum: ["Online", "Offline"],
+      enum: ["Online", "Offline", "Hybrid", "ASL"],
     },
     location: {
       type: String,
@@ -91,6 +97,19 @@ const applicationSchema = new mongoose.Schema({
   interviewResponse: {
     type: String,
     enum: ["confirmed", "declined"],
+  },
+  // Transcript phỏng vấn Video ASL
+  interviewTranscript: [{
+    question: String,
+    answer: String,
+    answerVi: String,
+    timestamp: { type: Date, default: Date.now },
+  }],
+  // Ghi chú của nhà tuyển dụng sau phỏng vấn
+  interviewNotes: {
+    type: String,
+    default: "",
+    maxLength: [5000, "Ghi chú không được vượt quá 5000 ký tự!"],
   },
   createdAt: {
     type: Date,

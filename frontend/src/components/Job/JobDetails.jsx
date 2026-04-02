@@ -8,6 +8,7 @@ import "./JobDetails.css";
 const JobDetails = () => {
   const { id } = useParams();
   const [job, setJob] = useState({});
+  const [hasApplied, setHasApplied] = useState(false);
   const navigate = useNavigate();
   const { isAuthorized, user } = useContext(Context);
 
@@ -24,7 +25,27 @@ const JobDetails = () => {
       .get(`/job/${id}`)
       .then((res) => setJob(res.data.job))
       .catch(() => navigate("/notfound"));
-  }, []);
+
+    // Check đã nộp đơn chưa: API là nguồn chính xác, localStorage chỉ hiện nhanh
+    if (isAuthorized && user?.role === "Job Seeker") {
+      api.get(`/application/check/${id}`)
+        .then((res) => {
+          setHasApplied(res.data.applied);
+          // Đồng bộ localStorage với API
+          const appliedJobs = JSON.parse(localStorage.getItem("appliedJobs") || "[]");
+          if (res.data.applied && !appliedJobs.includes(id)) {
+            localStorage.setItem("appliedJobs", JSON.stringify([...appliedJobs, id]));
+          } else if (!res.data.applied && appliedJobs.includes(id)) {
+            localStorage.setItem("appliedJobs", JSON.stringify(appliedJobs.filter(j => j !== id)));
+          }
+        })
+        .catch(() => {});
+    } else {
+      // Chưa đăng nhập → dùng localStorage tạm
+      const appliedLocal = JSON.parse(localStorage.getItem("appliedJobs") || "[]");
+      if (appliedLocal.includes(id)) setHasApplied(true);
+    }
+  }, [id, isAuthorized, user]);
 
   const formatDate = (d) => (d ? new Date(d).toLocaleDateString("vi-VN") : "");
   const formatSalary = (v) => v?.toLocaleString("vi-VN");
@@ -77,9 +98,13 @@ const JobDetails = () => {
               <span className="jd-status-pending">Chờ duyệt</span>
             )}
             {(!user || user.role !== "Employer") && !job.expired && job.status === "approved" && (
-              <Link to={`/application/${job._id}`} className="jd-btn-apply" onClick={handleApply}>
-                Ứng tuyển ngay
-              </Link>
+              hasApplied ? (
+                <span className="jd-btn-applied">Đã nộp đơn</span>
+              ) : (
+                <Link to={`/application/${job._id}`} className="jd-btn-apply" onClick={handleApply}>
+                  Ứng tuyển ngay
+                </Link>
+              )
             )}
           </div>
         </header>

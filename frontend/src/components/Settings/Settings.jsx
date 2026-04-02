@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { Context } from "../../main";
 import { useNavigate } from "react-router-dom";
 import api from "../../utils/api";
+import { DISABILITY_OPTIONS } from "../../utils/constants";
 import toast from "react-hot-toast";
 import "./Settings.css";
 
@@ -16,6 +17,9 @@ const Settings = () => {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    // Disability info for Job Seeker
+    disabilityType: "",
+    customDisabilityDetail: "",
     // Company info fields for Employer
     companyName: "",
     companySize: "",
@@ -41,6 +45,8 @@ const Settings = () => {
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
+        disabilityType: user.disabilityType || "",
+        customDisabilityDetail: user.customDisabilityDetail || "",
         companyName: user.companyInfo?.companyName || "",
         companySize: user.companyInfo?.companySize || "",
         website: user.companyInfo?.website || "",
@@ -74,6 +80,12 @@ const Settings = () => {
         email: formData.email,
         phone: formData.phone,
       };
+
+      // thêm disability info nếu là Job Seeker
+      if (user.role === "Job Seeker") {
+        updateData.disabilityType = formData.disabilityType;
+        updateData.customDisabilityDetail = formData.customDisabilityDetail;
+      }
 
       // thêm company info nếu là Employer
       if (user.role === "Employer") {
@@ -163,6 +175,47 @@ const Settings = () => {
               />
             </div>
           </div>
+
+          {/* Disability Info Section - Only for Job Seeker */}
+          {user?.role === "Job Seeker" && (
+            <div className="form-section">
+              <h2>Thông tin khuyết tật</h2>
+              <div className="form-group">
+                <label htmlFor="disabilityType">Loại khuyết tật</label>
+                <select
+                  id="disabilityType"
+                  name="disabilityType"
+                  value={formData.disabilityType}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (e.target.value !== "Khác") {
+                      setFormData((prev) => ({ ...prev, customDisabilityDetail: "" }));
+                    }
+                  }}
+                >
+                  <option value="">-- Chưa chọn --</option>
+                  {DISABILITY_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {formData.disabilityType === "Khác" && (
+                <div className="form-group">
+                  <label htmlFor="customDisabilityDetail">Chi tiết loại khuyết tật</label>
+                  <input
+                    type="text"
+                    id="customDisabilityDetail"
+                    name="customDisabilityDetail"
+                    value={formData.customDisabilityDetail}
+                    onChange={handleChange}
+                    placeholder="Nhập loại khuyết tật của bạn"
+                    maxLength={50}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Company Info Section - Only for Employer */}
           {user?.role === "Employer" && (

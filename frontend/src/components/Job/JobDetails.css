@@ -152,6 +152,18 @@
   background: #234a3d;
 }
 
+.jd-btn-applied {
+  display: inline-block;
+  padding: 13px 32px;
+  background: #e8e8e8;
+  color: #888;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+
 .jd-status-pending {
   padding: 6px 14px;
   background: #fff8e1;

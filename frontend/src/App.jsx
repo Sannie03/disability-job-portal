@@ -21,6 +21,8 @@ import Notifications from "./components/Layout/Notifications";
 import InterviewSchedule from "./components/Interview/InterviewSchedule";
 import Dashboard from "./components/Admin/Dashboard";
 import Settings from "./components/Settings/Settings";
+import InterviewRoom from "./components/Interview/InterviewRoom";
+import InterviewDashboard from "./components/Interview/InterviewDashboard";
 const App = () => {
   const { isAuthorized, setIsAuthorized, setUser } = useContext(Context);
   useEffect(() => {
@@ -55,6 +57,8 @@ const App = () => {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/interviews" element={<InterviewSchedule />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/interview-room/:applicationId" element={<InterviewRoom />} />
+          <Route path="/interview-dashboard" element={<InterviewDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />

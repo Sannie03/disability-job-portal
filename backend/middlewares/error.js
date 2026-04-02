@@ -23,7 +23,15 @@ export const errorMiddleware = (err, req, res, next) => {
   }
   
   if (err.code === 11000) {
-    const message = `Duplicate ${Object.keys(err.keyValue)} Entered`;
+    const keys = Object.keys(err.keyValue || {});
+    let message;
+    if (keys.includes("email")) {
+      message = "Email đã được sử dụng!";
+    } else if (keys.some(k => k.includes("applicantID") || k.includes("jobId"))) {
+      message = "Bạn đã nộp đơn cho công việc này rồi!";
+    } else {
+      message = `Dữ liệu bị trùng: ${keys.join(", ")}`;
+    }
     error = new ErrorHandler(message, 400);
   }
   

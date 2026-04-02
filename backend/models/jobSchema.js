@@ -70,7 +70,6 @@ const jobSchema = new mongoose.Schema({
   },
   supportedDisabilities: {
     type: [String],
-    enum: ["Khiếm thị", "Khiếm thính", "Vận động"],
     default: [],
   },
   // Trạng thái duyệt tin
@@ -128,12 +127,39 @@ rejectionReason: {
 
 // Middleware để tự động cập nhật trạng thái expired dựa trên deadline
 jobSchema.pre("save", function (next) {
-  // Chỉ set expired = true nếu deadline đã qua
-  if (this.deadline && new Date() > this.deadline) {
-    this.expired = true;
+  if (this.deadline) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const dl = new Date(this.deadline);
+    dl.setHours(0, 0, 0, 0);
+    this.expired = now > dl;
   }
-
   next();
+});
+
+// Query middleware: tự động set expired = true khi deadline đã qua (cho find/findOne)
+function autoExpire(docs) {
+  if (!docs) return;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // So sánh theo ngày, bỏ qua giờ
+  const list = Array.isArray(docs) ? docs : [docs];
+  for (const doc of list) {
+    if (doc.deadline) {
+      const dl = new Date(doc.deadline);
+      dl.setHours(0, 0, 0, 0);
+      if (now > dl) {
+        doc.expired = true;
+      }
+    }
+  }
+}
+
+jobSchema.post("find", function (docs) {
+  autoExpire(docs);
+});
+
+jobSchema.post("findOne", function (doc) {
+  autoExpire(doc);
 });
 
 

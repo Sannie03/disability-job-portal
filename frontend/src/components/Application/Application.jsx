@@ -1,5 +1,6 @@
 import api from "../../utils/api";
-import { useContext, useState, useEffect } from "react";
+import { DISABILITY_OPTIONS } from "../../utils/constants";
+import { useContext, useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 import { Context } from "../../main";
@@ -12,25 +13,70 @@ const Application = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [disabilityType, setDisabilityType] = useState("");
+  const [customDisability, setCustomDisability] = useState("");
+  const [requestASL, setRequestASL] = useState(false);
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [jobInfo, setJobInfo] = useState(null);
+  const [pageLoading, setPageLoading] = useState(true);
+  const submittingRef = useRef(false);
 
   const { isAuthorized, user } = useContext(Context);
   const navigateTo = useNavigate();
   const { id } = useParams();
 
+  // Gộp check auth + check job vào 1 useEffect để tránh race condition
   useEffect(() => {
     if (!isAuthorized || (user && user.role === "Employer")) {
       navigateTo("/");
+      return;
     }
-  }, [isAuthorized, user, navigateTo]);
+    // Chờ user load xong (user = null lúc đầu)
+    if (!user) return;
+
+    const checkJob = api.get(`/job/${id}`);
+    const checkAppliedReq = api.get(`/application/check/${id}`).catch((err) => {
+      console.warn("[Application] checkApplied failed:", err.response?.status, err.response?.data || err.message);
+      return { data: { applied: false } };
+    });
+
+    Promise.all([checkJob, checkAppliedReq])
+      .then(([jobRes, appliedRes]) => {
+        const job = jobRes.data.job;
+        if (appliedRes.data.applied) {
+          toast.error("Bạn đã nộp đơn cho công việc này rồi!");
+          navigateTo(`/job/${id}`);
+        } else if (job.expired) {
+          toast.error("Công việc này đã hết hạn nộp hồ sơ!");
+          navigateTo(`/job/${id}`);
+        } else if (job.status !== "approved") {
+          toast.error("Công việc này chưa được duyệt!");
+          navigateTo(`/job/${id}`);
+        } else {
+          setJobInfo(job);
+        }
+      })
+      .catch(() => {
+        toast.error("Không tìm thấy công việc!");
+        navigateTo("/job/getall");
+      })
+      .finally(() => setPageLoading(false));
+  }, [id, isAuthorized, user, navigateTo]);
 
   useEffect(() => {
     if (user) {
       if (user.name) setName(user.name);
       if (user.email) setEmail(user.email);
       if (user.phone) setPhone(user.phone);
+      if (user.disabilityType) {
+        if (user.disabilityType === "Khác") {
+          setDisabilityType("Khác");
+          setCustomDisability(user.customDisabilityDetail || "");
+        } else {
+          setDisabilityType(user.disabilityType);
+        }
+      }
     }
   }, [user]);
 
@@ -61,20 +107,34 @@ const Application = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Chặn double-submit bằng ref (synchronous, không bị React batching delay)
+    if (submittingRef.current) return;
     if (!resume) return setFileError("Vui lòng tải lên CV");
+    if (!/^0\d{9}$/.test(phone)) {
+      return toast.error("Số điện thoại phải có 10 chữ số và bắt đầu bằng số 0!");
+    }
+    if (disabilityType === "Khác" && !customDisability.trim()) {
+      return toast.error("Vui lòng nhập loại khuyết tật của bạn.");
+    }
 
+    submittingRef.current = true;
     setLoading(true);
     const loadingToast = toast.loading("Đang gửi...");
 
     const formData = new FormData();
-    formData.append("name", name);
-    formData.append("email", email);
-    formData.append("phone", phone);
-    formData.append("address", address);
-    formData.append("disabilityType", disabilityType);
-    formData.append("coverLetter", coverLetter);
+    formData.append("name", name.trim());
+    formData.append("email", email.trim());
+    formData.append("phone", phone.trim());
+    formData.append("address", address.trim());
+    // Chỉ gửi disabilityType khi có giá trị (không gửi chuỗi rỗng)
+    const finalDisability = disabilityType === "Khác" ? customDisability.trim() : disabilityType;
+    if (finalDisability) {
+      formData.append("disabilityType", finalDisability);
+    }
+    formData.append("coverLetter", coverLetter.trim());
     formData.append("resume", resume);
     formData.append("jobId", id);
+    formData.append("requestASL", requestASL);
 
     try {
       await api.post("/application/post", formData);
@@ -89,139 +149,149 @@ const Application = () => {
       navigateTo("/job/getall");
     } catch (error) {
       toast.dismiss(loadingToast);
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+      const msg = error.response?.data?.message || "Có lỗi xảy ra";
+      toast.error(msg);
+      // Nếu lỗi duplicate → redirect về job details (tránh submit lại)
+      if (msg.includes("đã nộp đơn")) {
+        navigateTo(`/job/${id}`);
+      }
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
+  if (pageLoading) {
+    return (
+      <section className="application">
+        <div className="container">
+          <p style={{ textAlign: "center", padding: "40px 0" }}>Đang tải...</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="application" aria-label="Form nộp đơn ứng tuyển">
       <div className="container">
-        <div className="form-header">
-          <h1 id="form-title">Nộp đơn ứng tuyển</h1>
+        <h3>Nộp đơn ứng tuyển</h3>
+        {jobInfo && (
           <p className="form-desc">
-            Điền đầy đủ thông tin bên dưới. Các trường có dấu (*) là bắt buộc.
+            Vị trí: <strong>{jobInfo.title}</strong>
           </p>
-        </div>
+        )}
 
-        <form onSubmit={handleSubmit} aria-labelledby="form-title">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="applicant-name">Họ và tên *</label>
+        <form onSubmit={handleSubmit} className="form-section">
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">Họ và tên</label>
               <input
-                id="applicant-name"
                 type="text"
                 placeholder="Nhập họ và tên"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                aria-required="true"
                 autoComplete="name"
               />
             </div>
-
-            <div className="form-group">
-              <label htmlFor="applicant-email">Email *</label>
+            <div className="field-group">
+              <label className="field-label">Email</label>
               <input
-                id="applicant-email"
                 type="email"
                 placeholder="Nhập email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                aria-required="true"
                 autoComplete="email"
               />
             </div>
           </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="applicant-phone">Số điện thoại *</label>
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">Số điện thoại</label>
               <input
-                id="applicant-phone"
                 type="tel"
                 placeholder="Nhập số điện thoại"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                aria-required="true"
                 autoComplete="tel"
               />
             </div>
-
-            <div className="form-group">
-              <label htmlFor="applicant-address">Địa chỉ *</label>
+            <div className="field-group">
+              <label className="field-label">Địa chỉ</label>
               <input
-                id="applicant-address"
                 type="text"
                 placeholder="Nhập địa chỉ"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 required
-                aria-required="true"
                 autoComplete="street-address"
               />
             </div>
           </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="disability-type">Loại khuyết tật *</label>
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">Loại khuyết tật</label>
               <select
-                id="disability-type"
                 value={disabilityType}
-                onChange={(e) => setDisabilityType(e.target.value)}
-                required
-                aria-required="true"
+                onChange={(e) => {
+                  setDisabilityType(e.target.value);
+                  if (e.target.value !== "Khác") setCustomDisability("");
+                }}
               >
-                <option value="">-- Chọn loại khuyết tật --</option>
-                <option value="Không có">Không có</option>
-                <option value="Khiếm thị">Khiếm thị</option>
-                <option value="Khiếm thính">Khiếm thính</option>
-                <option value="Vận động">Khuyết tật vận động</option>
-                <option value="Giao tiếp">Khuyết tật giao tiếp</option>
-                <option value="Khác">Khác</option>
+                <option value="">Không có</option>
+                {DISABILITY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
               </select>
+              {disabilityType === "Khác" && (
+                <input
+                  type="text"
+                  placeholder="Nhập loại khuyết tật"
+                  value={customDisability}
+                  onChange={(e) => setCustomDisability(e.target.value)}
+                  required
+                  style={{ marginTop: 8 }}
+                />
+              )}
             </div>
-
-            <div className="form-group">
-              <label htmlFor="resume-file">Tải lên CV *</label>
+            <div className="field-group">
+              <label className="field-label">Tải lên CV</label>
               <input
-                id="resume-file"
                 type="file"
                 accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx"
                 onChange={handleFileChange}
-                aria-required="true"
-                aria-describedby={fileError ? "file-error" : "file-hint"}
-                aria-invalid={fileError ? "true" : "false"}
               />
-              <small id="file-hint" className="field-note">
-                PNG, JPEG, PDF, DOCX — tối đa 5MB
-              </small>
+              <span className="field-note">PNG, JPEG, PDF, DOCX — tối đa 5MB</span>
               {fileError && (
-                <p id="file-error" className="error-text" role="alert">
-                  {fileError}
-                </p>
+                <p className="error-text">{fileError}</p>
               )}
             </div>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="cover-letter">Thư xin việc *</label>
+          {disabilityType && (
+            <div className="field-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={requestASL}
+                  onChange={(e) => setRequestASL(e.target.checked)}
+                />
+                Yêu cầu phỏng vấn bằng ngôn ngữ ký hiệu (ASL)
+              </label>
+            </div>
+          )}
+          <div className="field-group">
+            <label className="field-label">Thư xin việc</label>
             <textarea
-              id="cover-letter"
               placeholder="Giới thiệu bản thân, kinh nghiệm và lý do ứng tuyển..."
               value={coverLetter}
               onChange={(e) => setCoverLetter(e.target.value)}
               required
-              aria-required="true"
               rows={6}
             />
           </div>
-
-          <button type="submit" disabled={loading} aria-busy={loading}>
+          <button type="submit" className="submit-btn" disabled={loading}>
             {loading ? "Đang gửi..." : "Gửi đơn ứng tuyển"}
           </button>
         </form>

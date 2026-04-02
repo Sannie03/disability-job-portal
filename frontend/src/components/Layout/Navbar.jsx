@@ -36,40 +36,41 @@ const Navbar = () => {
         </div>
 
         <ul className={!show ? "menu" : "show-menu menu"} role="menubar">
-          <li><Link to="/" onClick={() => setShow(false)}>TRANG CHỦ</Link></li>
-          <li><Link to="/job/getall" onClick={() => setShow(false)}>TẤT CẢ CÔNG VIỆC</Link></li>
+          <li><Link to="/" onClick={() => setShow(false)}>Trang chủ</Link></li>
+          <li><Link to="/job/getall" onClick={() => setShow(false)}>Việc làm</Link></li>
 
           {!isAuthorized && (
             <>
-              <li><Link to="/login" onClick={() => setShow(false)}>ĐĂNG NHẬP</Link></li>
-              <li><Link to="/register" onClick={() => setShow(false)}>ĐĂNG KÝ</Link></li>
+              <li><Link to="/login" onClick={() => setShow(false)}>Đăng nhập</Link></li>
+              <li><Link to="/register" onClick={() => setShow(false)}>Đăng ký</Link></li>
             </>
           )}
 
           {isAuthorized && (
             <>
-              {user && user.role !== "Admin" && (
+              {user && user.role === "Job Seeker" && (
                 <>
                   <li>
-                    <Link to="/applications/me" onClick={() => setShow(false)}>
-                      {user.role === "Employer" ? "HỒ SƠ ỨNG TUYỂN" : "ĐƠN ỨNG TUYỂN CỦA TÔI"}
-                    </Link>
+                    <Link to="/applications/me" onClick={() => setShow(false)}>Đơn ứng tuyển</Link>
                   </li>
-                  <li><Link to="/interviews" onClick={() => setShow(false)}>LỊCH PHỎNG VẤN</Link></li>
+                  <li><Link to="/interviews" onClick={() => setShow(false)}>Lịch phỏng vấn</Link></li>
                 </>
               )}
 
               {user && user.role === "Employer" && (
                 <>
-                  <li><Link to="/job/post" onClick={() => setShow(false)}>ĐĂNG CÔNG VIỆC MỚI</Link></li>
-                  <li><Link to="/job/me" onClick={() => setShow(false)}>CÔNG VIỆC CỦA BẠN</Link></li>
+                  <li><Link to="/applications/me" onClick={() => setShow(false)}>Hồ sơ ứng tuyển</Link></li>
+                  <li><Link to="/job/post" onClick={() => setShow(false)}>Đăng việc</Link></li>
+                  <li><Link to="/job/me" onClick={() => setShow(false)}>Việc của bạn</Link></li>
+                  <li><Link to="/interviews" onClick={() => setShow(false)}>Lịch phỏng vấn</Link></li>
+                  <li><Link to="/interview-dashboard" onClick={() => setShow(false)}>Bảng lịch PV</Link></li>
                 </>
               )}
 
               {user && user.role === "Admin" && (
                 <>
-                  <li><Link to="/admin/jobs" onClick={() => setShow(false)}>DUYỆT TIN TUYỂN DỤNG</Link></li>
-                  <li><Link to="/admin/dashboard" onClick={() => setShow(false)}>BẢNG ĐIỀU KHIỂN</Link></li>
+                  <li><Link to="/admin/jobs" onClick={() => setShow(false)}>Duyệt tin</Link></li>
+                  <li><Link to="/admin/dashboard" onClick={() => setShow(false)}>Dashboard</Link></li>
                 </>
               )}
 
@@ -79,7 +80,7 @@ const Navbar = () => {
                   <FiSettings size={20} aria-hidden="true" />
                 </Link>
               </li>
-              <button onClick={handleLogout} aria-label="Đăng xuất khỏi tài khoản">Đăng xuất</button>
+              <button onClick={handleLogout} aria-label="Đăng xuất">Đăng xuất</button>
             </>
           )}
         </ul>

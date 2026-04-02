@@ -1,73 +1,63 @@
-/* Application Form — 2-Column Layout */
+/* Application Form */
 
 .application {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 48px 20px;
+  background: #f5f5f5;
+  padding: 24px 16px 50px;
 }
 
 .application .container {
   max-width: 680px;
   margin: 0 auto;
-  background: #fff;
-  border-radius: 12px;
-  padding: 36px 36px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border-top: 4px solid #2d5649;
 }
 
-/* Header */
-
-.application .form-header {
-  margin-bottom: 28px;
-}
-
-.application h1 {
-  font-size: 26px;
-  font-weight: 700;
-  color: #1a1a1a;
+.application h3 {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: #222;
   margin: 0 0 6px;
 }
 
 .application .form-desc {
+  text-align: center;
   font-size: 15px;
-  color: #5a6872;
-  margin: 0;
+  color: #666;
+  margin: 0 0 20px;
 }
 
-/* Form */
-
-.application form {
+.application form.form-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 24px;
+  border: 1px solid #ddd;
+  margin-top: 20px;
 }
 
-/* 2-Column Row */
-
-.application .form-row {
+.application .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 14px;
 }
 
-/* Form Group */
-
-.application .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.application .field-group {
+  margin-bottom: 14px;
 }
 
-/* Labels */
+.application .field-group:last-child {
+  margin-bottom: 0;
+}
 
-.application label {
+.application .field-label {
+  display: block;
   font-size: 14px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-weight: 500;
+  color: #444;
+  margin-bottom: 6px;
 }
-
-/* Inputs / Textarea / Select */
 
 .application input[type="text"],
 .application input[type="email"],
@@ -75,147 +65,110 @@
 .application textarea,
 .application select {
   width: 100%;
-  padding: 11px 14px;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   font-size: 15px;
-  color: #1a1a1a;
+  color: #333;
   background: #fff;
-  border: 2px solid #d1d8e0;
-  border-radius: 8px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
   box-sizing: border-box;
-}
-
-.application input::placeholder,
-.application textarea::placeholder {
-  color: #95a5a6;
 }
 
 .application input:focus,
 .application textarea:focus,
 .application select:focus {
+  outline: none;
   border-color: #2d5649;
-  box-shadow: 0 0 0 3px rgba(45, 86, 73, 0.12);
 }
 
-.application textarea {
-  min-height: 130px;
-  resize: vertical;
-  line-height: 1.6;
+.application input::placeholder,
+.application textarea::placeholder {
+  color: #999;
 }
-
-/* Select */
 
 .application select {
   cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%232c3e50' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 12px;
-  padding-right: 40px;
 }
 
-/* File Input */
+.application textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+/* File upload */
 
 .application input[type="file"] {
-  padding: 14px;
+  padding: 10px;
   font-size: 14px;
-  background: #f8f9fa;
-  border: 2px dashed #cbd5e0;
-  border-radius: 8px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .application input[type="file"]:hover {
   border-color: #2d5649;
-  background: #f0fdf8;
 }
-
-/* Helper / Error */
 
 .application .field-note {
   font-size: 13px;
-  color: #7f8c8d;
+  color: #999;
+  margin-top: 4px;
 }
 
 .application .error-text {
-  color: #c0392b;
+  color: #e74c3c;
   font-size: 13px;
-  font-weight: 500;
-  margin: 0;
+  margin: 4px 0 0;
 }
 
-.application input[aria-invalid="true"] {
-  border-color: #c0392b;
-  background: #fff5f5;
+/* Checkbox ASL */
+
+.application .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #333;
 }
 
-/* Submit */
+.application .checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2d5649;
+  cursor: pointer;
+}
 
-.application button[type="submit"] {
+/* Button */
+
+.application .submit-btn {
   width: 100%;
   padding: 14px;
+  background: #2d5649;
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
-  background: #2d5649;
-  border: none;
-  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
 }
 
-.application button[type="submit"]:hover:not(:disabled) {
-  background: #3d7a64;
-  box-shadow: 0 2px 10px rgba(45, 86, 73, 0.25);
+.application .submit-btn:hover:not(:disabled) {
+  background: #234a3d;
 }
 
-.application button[type="submit"]:disabled {
-  background: #95a5a6;
+.application .submit-btn:disabled {
+  background: #999;
   cursor: not-allowed;
 }
 
-/* Focus-visible */
-
-.application input:focus-visible,
-.application textarea:focus-visible,
-.application select:focus-visible,
-.application button:focus-visible {
-  outline: 3px solid #2d5649;
-  outline-offset: 2px;
-}
-
-/* Responsive */
-
-@media (max-width: 768px) {
-  .application {
-    padding: 24px 16px;
-  }
-
-  .application .container {
-    padding: 28px 24px;
-  }
-
-  .application .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .application h1 {
-    font-size: 22px;
-  }
-}
-
-@media (max-width: 500px) {
-  .application .container {
-    padding: 24px 18px;
-    border-radius: 8px;
-  }
-
-  .application input,
-  .application textarea,
-  .application select {
-    font-size: 16px;
-  }
+@media (max-width: 600px) {
+  .application { padding: 20px 14px; }
+  .application h3 { font-size: 20px; }
+  .application .form-section { padding: 16px; }
+  .application .field-row { grid-template-columns: 1fr; }
 }

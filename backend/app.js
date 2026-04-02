@@ -24,26 +24,7 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 
-// Rate limiting chung - chống DDoS/brute force
-const isDev = process.env.NODE_ENV !== "production";
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: isDev ? 1000 : 100,  // dev: 1000, production: 100
-  message: { success: false, message: "Quá nhiều yêu cầu, vui lòng thử lại sau." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api", apiLimiter);
-
-// Rate limit riêng cho login/register (chặt hơn)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isDev ? 100 : 20,  // dev: 100, production: 20
-  message: { success: false, message: "Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút." },
-});
-app.use("/api/v1/user/login", authLimiter);
-app.use("/api/v1/user/register", authLimiter);
-
+// CORS phải chạy TRƯỚC rate limiter để 429 response cũng có CORS headers
 const fallbackOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -65,6 +46,26 @@ app.use(
     credentials: true,
   })
 );
+
+// Rate limiting chung - chống DDoS/brute force
+const isDev = process.env.NODE_ENV !== "production";
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: isDev ? 1000 : 100,  // dev: 1000, production: 100
+  message: { success: false, message: "Quá nhiều yêu cầu, vui lòng thử lại sau." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", apiLimiter);
+
+// Rate limit riêng cho login/register (chặt hơn)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 100 : 20,  // dev: 100, production: 20
+  message: { success: false, message: "Quá nhiều lần thử đăng nhập, vui lòng thử lại sau 15 phút." },
+});
+app.use("/api/v1/user/login", authLimiter);
+app.use("/api/v1/user/register", authLimiter);
 
 app.use(cookieParser());
 app.use(express.json({ limit: "10kb" }));

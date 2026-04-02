@@ -2,6 +2,13 @@ import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { Job } from "../models/jobSchema.js";
 import ErrorHandler from "../middlewares/error.js";
 
+// Helper: lấy đầu ngày hôm nay (00:00:00) — dùng để so sánh deadline theo ngày
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 export const getAllJobs = catchAsyncErrors(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
@@ -14,7 +21,7 @@ export const getAllJobs = catchAsyncErrors(async (req, res, next) => {
     expired: false,
     status: "approved",
     isDeleted: { $ne: true },
-    deadline: { $gt: new Date() },
+    deadline: { $gte: startOfToday() },
   };
 
   const [jobs, total] = await Promise.all([
@@ -72,10 +79,10 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Vui lòng nhập hạn nộp hồ sơ.", 400));
   }
 
-  // Validation: Kiểm tra deadline phải là ngày trong tương lai
+  // Validation: Kiểm tra deadline phải là ngày hôm nay hoặc tương lai
   const deadlineDate = new Date(deadline);
-  if (deadlineDate <= new Date()) {
-    return next(new ErrorHandler("Hạn nộp hồ sơ phải là ngày trong tương lai.", 400));
+  if (deadlineDate < startOfToday()) {
+    return next(new ErrorHandler("Hạn nộp hồ sơ phải là ngày hôm nay hoặc trong tương lai.", 400));
   }
 
   // Validation: Lương
@@ -120,6 +127,12 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
   if (isDisabilityFriendly && (!supportedDisabilities || supportedDisabilities.length === 0)) {
     return next(new ErrorHandler("Vui lòng chọn ít nhất một loại khiếm khuyết được hỗ trợ.", 400));
   }
+  if (supportedDisabilities && supportedDisabilities.length > 0) {
+    const invalid = supportedDisabilities.find(d => !d || d.trim().length < 2 || d.trim().length > 50);
+    if (invalid !== undefined) {
+      return next(new ErrorHandler("Mỗi loại khuyết tật phải từ 2 đến 50 ký tự.", 400));
+    }
+  }
 
   const postedBy = req.user._id;
   const job = await Job.create({
@@ -140,7 +153,7 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
     postedBy,
   });
 
-  res.status(200).json({
+  res.status(201).json({
     success: true,
     message: "Đăng tin tuyển dụng thành công!",
     job,
@@ -176,8 +189,11 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
   if (req.body.deadline) {
     const deadlineDate = new Date(req.body.deadline);
     const existingDeadline = new Date(job.deadline);
-    // Chỉ validate nếu deadline thực sự thay đổi
-    if (deadlineDate.getTime() !== existingDeadline.getTime() && deadlineDate <= new Date()) {
+    // So sánh chỉ theo ngày (bỏ giờ) để tránh lệch timezone
+    const toDateOnly = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const isChanged = toDateOnly(deadlineDate).getTime() !== toDateOnly(existingDeadline).getTime();
+    const today = toDateOnly(new Date());
+    if (isChanged && deadlineDate < today) {
       return next(new ErrorHandler("Hạn nộp hồ sơ phải là ngày trong tương lai.", 400));
     }
   }
@@ -218,17 +234,27 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
   // Deadline
   if (deadline !== undefined) {
     updateData.deadline = deadline;
+    // Nếu deadline mới >= hôm nay → tự reset expired
+    if (new Date(deadline) >= startOfToday()) {
+      updateData.expired = false;
+    }
   }
 
-  // Expired: employer tự đóng/mở tin
+  // Expired: employer tự đóng/mở tin (chỉ khi không sửa deadline)
   const { expired } = req.body;
-  if (expired !== undefined) {
+  if (expired !== undefined && updateData.expired === undefined) {
     updateData.expired = expired === true || expired === "true";
   }
 
   // Validation: disability
   if (updateData.isDisabilityFriendly === true && (!updateData.supportedDisabilities || updateData.supportedDisabilities.length === 0)) {
     return next(new ErrorHandler("Vui lòng chọn ít nhất một loại khiếm khuyết được hỗ trợ.", 400));
+  }
+  if (updateData.supportedDisabilities && updateData.supportedDisabilities.length > 0) {
+    const invalid = updateData.supportedDisabilities.find(d => !d || d.trim().length < 2 || d.trim().length > 50);
+    if (invalid !== undefined) {
+      return next(new ErrorHandler("Mỗi loại khuyết tật phải từ 2 đến 50 ký tự.", 400));
+    }
   }
 
   // Xử lý lương
@@ -237,13 +263,13 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
                    (salaryTo !== undefined && salaryTo !== null && salaryTo !== "" && Number(salaryTo) > 0);
 
   if (hasFixed) {
-    updateData.fixedSalary = Number(fixedSalary);
+    updateData.fixedSalary = Number(fixedSalary) * 1000000;
     unsetFields.salaryFrom = "";
     unsetFields.salaryTo = "";
   } else if (hasRange) {
     unsetFields.fixedSalary = "";
-    if (Number(salaryFrom) > 0) updateData.salaryFrom = Number(salaryFrom);
-    if (Number(salaryTo) > 0) updateData.salaryTo = Number(salaryTo);
+    if (Number(salaryFrom) > 0) updateData.salaryFrom = Number(salaryFrom) * 1000000;
+    if (Number(salaryTo) > 0) updateData.salaryTo = Number(salaryTo) * 1000000;
     if (updateData.salaryFrom && updateData.salaryTo && updateData.salaryFrom >= updateData.salaryTo) {
       return next(new ErrorHandler("Lương từ phải nhỏ hơn lương đến.", 400));
     }
@@ -314,7 +340,7 @@ export const getDisabilityFriendlyJobs = catchAsyncErrors(async (req, res, next)
     expired: false,
     isDisabilityFriendly: true,
     isDeleted: { $ne: true },
-    deadline: { $gt: new Date() },
+    deadline: { $gte: startOfToday() },
   };
 
   // Nếu có chỉ định loại khiếm khuyết cụ thể
@@ -344,7 +370,7 @@ export const searchJobs = catchAsyncErrors(async (req, res, next) => {
     salaryMax 
   } = req.query;
 
-  let filter = { expired: false, isDeleted: { $ne: true }, deadline: { $gt: new Date() } };
+  let filter = { expired: false, isDeleted: { $ne: true }, deadline: { $gte: startOfToday() } };
 
   // Tìm kiếm theo keyword trong title hoặc description
   if (keyword) {
@@ -451,11 +477,10 @@ export const extendDeadline = catchAsyncErrors(async (req, res, next) => {
 
   const newDeadlineDate = new Date(newDeadline);
   const currentDeadline = new Date(job.deadline);
-  const now = new Date();
 
-  // Validation: Ngày mới phải sau ngày hiện tại
-  if (newDeadlineDate <= now) {
-    return next(new ErrorHandler("Ngày hạn mới phải là ngày trong tương lai.", 400));
+  // Validation: Ngày mới phải là hôm nay hoặc sau
+  if (newDeadlineDate < startOfToday()) {
+    return next(new ErrorHandler("Ngày hạn mới phải là ngày hôm nay hoặc trong tương lai.", 400));
   }
 
   // Validation: Ngày mới phải sau deadline cũ

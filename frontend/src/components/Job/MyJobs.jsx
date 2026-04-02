@@ -1,4 +1,5 @@
 import api from "../../utils/api";
+import { JOB_DISABILITY_OPTIONS } from "../../utils/constants";
 import { useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FaCheck } from "react-icons/fa6";
@@ -19,7 +20,7 @@ const CATEGORIES = [
 ];
 
 const WORK_MODES = ["Online", "Offline", "Hybrid"];
-const DISABILITIES = ["Khiếm thị", "Khiếm thính", "Vận động"];
+const DISABILITIES = JOB_DISABILITY_OPTIONS.map(d => d.value);
 
 const MyJobs = () => {
   const [myJobs, setMyJobs] = useState([]);
@@ -72,7 +73,6 @@ const MyJobs = () => {
       deadline: job.deadline,
       isDisabilityFriendly: !!job.isDisabilityFriendly,
       supportedDisabilities: job.supportedDisabilities || [],
-      expired: !!job.expired,
     };
 
     // chỉ gửi 1 loại salary để tránh conflict trên backend
@@ -422,6 +422,14 @@ const MyJobs = () => {
                               </span>
                             );
                           })}
+                          {(job.supportedDisabilities || [])
+                            .filter((d) => !DISABILITIES.includes(d))
+                            .map((d) => (
+                              <span key={d} className="disability-tag active disabled">
+                                <FaCheck size={8} />
+                                {d}
+                              </span>
+                            ))}
                         </div>
                       )}
                     </div>

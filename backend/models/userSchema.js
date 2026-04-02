@@ -20,9 +20,16 @@ const userSchema = new mongoose.Schema({
     validate: [validator.isEmail, "Vui lòng cung cấp một email hợp lệ!"],
   },
 
-  // Số điện thoại (bắt buộc với đăng ký thường)
+  // Số điện thoại
   phone: {
     type: String,
+    validate: {
+      validator: function (v) {
+        if (!v) return true; // không bắt buộc
+        return /^0\d{9}$/.test(v);
+      },
+      message: "Số điện thoại phải có 10 chữ số và bắt đầu bằng số 0!",
+    },
   },
 
   // Mật khẩu (chỉ dùng cho đăng ký thường)
@@ -60,8 +67,7 @@ const userSchema = new mongoose.Schema({
     },
     companySize: {
       type: String,
-      enum: ["1-10", "11-50", "51-200", "201-500", "500+", ""],
-      default: "",
+      enum: ["1-10", "11-50", "51-200", "201-500", "500+"],
     },
     website: {
       type: String,
@@ -76,6 +82,33 @@ const userSchema = new mongoose.Schema({
     },
   },
 
+  // Loại khuyết tật (chỉ dành cho Job Seeker)
+  disabilityType: {
+    type: String,
+    default: "",
+  },
+  customDisabilityDetail: {
+    type: String,
+    maxLength: [50, "Chi tiết khuyết tật không được vượt quá 50 ký tự!"],
+    default: "",
+  },
+
+  // Danh sách công việc đã được chấp nhận
+  acceptedJobs: [{
+    jobId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Job",
+    },
+    applicationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Application",
+    },
+    acceptedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
+
   createdAt: {
     type: Date,
     default: Date.now,
@@ -83,6 +116,10 @@ const userSchema = new mongoose.Schema({
 });
 
 
+
+// Indexes (email đã có unique: true nên không cần index riêng)
+userSchema.index({ role: 1 });
+userSchema.index({ googleId: 1 }, { sparse: true });
 
 // Mã hóa mật khẩu trước khi lưu (chỉ áp dụng cho đăng ký thường)
 userSchema.pre("save", async function (next) {

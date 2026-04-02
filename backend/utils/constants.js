@@ -49,3 +49,20 @@ export const AUTH_PROVIDERS = {
   LOCAL: "local",
   GOOGLE: "google",
 };
+
+// Danh sách loại khuyết tật chuẩn
+export const DISABILITY_TYPES = [
+  "Khiếm thị",
+  "Khiếm thính",
+  "Vận động",
+  "Giao tiếp",
+];
+
+// Chỉ loại khuyết tật dùng cho Job (không có "Không có")
+export const JOB_DISABILITY_OPTIONS = [
+  { value: "Khiếm thị", label: "Khiếm thị" },
+  { value: "Khiếm thính", label: "Khiếm thính" },
+  { value: "Vận động", label: "Vận động" },
+  { value: "Giao tiếp", label: "Giao tiếp" },
+  { value: "Khác", label: "Khác" },
+];

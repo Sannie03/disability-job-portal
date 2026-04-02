@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import api from "../../utils/api";
+import { JOB_DISABILITY_OPTIONS } from "../../utils/constants";
 import { Link, useNavigate } from "react-router-dom";
 import { Context } from "../../main";
 import toast from "react-hot-toast";
@@ -28,7 +29,7 @@ const Jobs = () => {
     "Kế toán", "Nhân sự", "Kinh doanh", "Thiết kế đồ họa",
     "Biên dịch", "Chăm sóc khách hàng"
   ];
-  const disabilities = ["Khiếm thị", "Khiếm thính", "Vận động", "Giao tiếp", "Khác"];
+  const disabilities = JOB_DISABILITY_OPTIONS.map(d => d.value);
 
   useEffect(() => {
     api.get(`/job/getall?page=${currentPage}&limit=10`)
@@ -40,10 +41,9 @@ const Jobs = () => {
       .catch(err => console.log(err));
 
     if (isAuthorized && user?.role === "Job Seeker") {
-      api.get("/application/jobseeker/getall")
+      api.get("/application/applied-jobs")
         .then(res => {
-          const appliedJobIds = res.data.applications?.map(app => app.jobId?._id || app.jobId) || [];
-          setApplied(appliedJobIds);
+          setApplied(res.data.jobIds || []);
         })
         .catch(err => console.log(err));
     }
