@@ -27,7 +27,7 @@ const ManageJobs = () => {
       const { data } = await api.get("/job/admin/pending")
       setJobs(data.jobs)
     } catch (error) {
-      toast.error("Không thể tải danh sách tin chờ duyệt")
+      toast.error(error.response?.data?.message || "Không thể tải danh sách tin chờ duyệt")
     }
   }
 
@@ -60,7 +60,7 @@ const ManageJobs = () => {
       fetchPendingJobs()
       setSelectedJobs([])
     } catch (error) {
-      toast.error("Duyệt tin thất bại")
+      toast.error(error.response?.data?.message || "Duyệt tin thất bại")
     }
   }
 
@@ -77,7 +77,7 @@ const ManageJobs = () => {
       fetchPendingJobs()
       setSelectedJobs([])
     } catch (error) {
-      toast.error("Từ chối tin thất bại")
+      toast.error(error.response?.data?.message || "Từ chối tin thất bại")
     }
   }
 
@@ -97,7 +97,7 @@ const ManageJobs = () => {
       fetchPendingJobs()
       setSelectedJobs([])
     } catch (error) {
-      toast.error("Duyệt nhiều tin thất bại")
+      toast.error(error.response?.data?.message || "Duyệt nhiều tin thất bại")
     } finally {
       setLoading(false)
     }

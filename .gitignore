@@ -10,6 +10,7 @@ backend/.env*
 !.env.example
 !**/.env.example
 .venv/
+/backend/seeds/admin.local.json
 
 # Python cache
 __pycache__/
