@@ -1,0 +1,11 @@
+Flask>=3.1,<4
+flask-cors>=6,<7
+Flask-SocketIO>=5.5,<6
+gunicorn>=23,<24; sys_platform != "win32"
+simple-websocket>=1.1,<2
+PyJWT>=2.10,<3
+python-dotenv>=1.1,<2
+numpy>=2.2,<3
+# All committed sklearn models were saved with 1.7.2.
+scikit-learn==1.7.2
+deep-translator>=1.11,<2

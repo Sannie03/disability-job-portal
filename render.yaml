@@ -1,0 +1,68 @@
+envVarGroups:
+  - name: careerconnect-common
+    envVars:
+      - key: ASL_TOKEN_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://52hzconnect.site,https://www.52hzconnect.site
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: Asia/Ho_Chi_Minh
+
+services:
+  - type: web
+    name: careerconnect-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    domains:
+      - api.52hzconnect.site
+    envVars:
+      - fromGroup: careerconnect-common
+      - key: NODE_VERSION
+        value: "22"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: COOKIE_SAME_SITE
+        value: lax
+      - key: COOKIE_EXPIRE
+        value: "7"
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DB_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+  - type: web
+    name: careerconnect-asl
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: ASL_AI
+    buildCommand: pip install -r requirements-api.txt
+    startCommand: gunicorn -c gunicorn.conf.py api.server:app
+    healthCheckPath: /health
+    domains:
+      - asl.52hzconnect.site
+    envVars:
+      - fromGroup: careerconnect-common
+      - key: PYTHON_VERSION
+        value: "3.13.15"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"

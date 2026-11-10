@@ -32,60 +32,44 @@ const Jobs = () => {
   const disabilities = JOB_DISABILITY_OPTIONS.map(d => d.value);
 
   useEffect(() => {
-    api.get(`/job/getall?page=${currentPage}&limit=10`)
-      .then(res => {
-        setJobs(res.data);
-        setFiltered(res.data.jobs || []);
-        setPagination(res.data.pagination);
-      })
-      .catch(err => console.log(err));
-
-    if (isAuthorized && user?.role === "Job Seeker") {
-      api.get("/application/applied-jobs")
-        .then(res => {
-          setApplied(res.data.jobIds || []);
-        })
-        .catch(err => console.log(err));
-    }
-  }, [isAuthorized, user, currentPage]);
+    setCurrentPage(1);
+  }, [keyword, city, category, workMode, disability, salaryMin, salaryMax]);
 
   useEffect(() => {
-    if (!jobs.jobs) return;
-    let result = [...jobs.jobs];
-
-    if (keyword.trim()) {
-      const kw = keyword.toLowerCase();
-      result = result.filter(j =>
-        j.title.toLowerCase().includes(kw) ||
-        j.description.toLowerCase().includes(kw) ||
-        j.category.toLowerCase().includes(kw)
-      );
-    }
-    if (city) result = result.filter(j => j.city === city);
-    if (category) result = result.filter(j => j.category === category);
-    if (workMode) result = result.filter(j => j.workMode === workMode);
-
-    if (disability) {
-      result = result.filter(j =>
-        j.isDisabilityFriendly && j.supportedDisabilities?.includes(disability)
-      );
-    }
-
-    if (salaryMin || salaryMax) {
-      result = result.filter(j => {
-        const min = j.fixedSalary || j.salaryFrom || 0;
-        const max = j.fixedSalary || j.salaryTo || Infinity;
-        const fMin = salaryMin ? parseInt(salaryMin) : 0;
-        const fMax = salaryMax ? parseInt(salaryMax) : Infinity;
-        return max >= fMin && min <= fMax;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      api.get("/job/getall", {
+        params: {
+          page: currentPage, limit: 10, keyword, city, category, workMode,
+          supportedDisability: disability, salaryMin, salaryMax,
+        },
+        signal: controller.signal,
+      }).then(({ data }) => {
+        setJobs(data);
+        setFiltered(data.jobs || []);
+        setPagination(data.pagination);
+      }).catch(error => {
+        if (error.code !== "ERR_CANCELED") toast.error(error.response?.data?.message || "Không thể tải công việc.");
       });
-    }
-    setFiltered(result);
-  }, [jobs, keyword, city, category, workMode, disability, salaryMin, salaryMax]);
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [currentPage, keyword, city, category, workMode, disability, salaryMin, salaryMax]);
 
-  const cities = [...new Set(jobs.jobs?.map(j => j.city) || [])];
-  const allCategories = [...new Set([...categories, ...(jobs.jobs?.map(j => j.category) || [])])];
-  allCategories.sort((a, b) => a.localeCompare(b, 'vi'));
+  useEffect(() => {
+    if (!isAuthorized || user?.role !== "Job Seeker") {
+      setApplied([]);
+      return;
+    }
+    let active = true;
+    api.get("/application/applied-jobs")
+      .then(({ data }) => { if (active) setApplied(data.jobIds || []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [isAuthorized, user]);
+
+  const cities = jobs.filters?.cities || [];
+  const allCategories = [...new Set([...categories, ...(jobs.filters?.categories || [])])];
+  allCategories.sort((a, b) => a.localeCompare(b, "vi"));
 
   const activeFilterCount = [city, category, workMode, disability, salaryMin, salaryMax].filter(Boolean).length;
 

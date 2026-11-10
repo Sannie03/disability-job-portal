@@ -36,6 +36,10 @@ const NotificationBell = () => {
     if (notification.type === "application_received") {
       // Nhà tuyển dụng nhận được đơn ứng tuyển → Xem danh sách ứng viên
       navigateTo('/applications/me');
+    } else if (["interview_scheduled", "interview_confirmed", "interview_declined"].includes(notification.type)) {
+      navigateTo('/interviews');
+    } else if (notification.type === "job_rejected") {
+      navigateTo('/notifications');
     } else if (notification.jobId) {
       // Các thông báo khác (job_approved, job_rejected) → Xem chi tiết công việc
       navigateTo(`/job/${notification.jobId}`);

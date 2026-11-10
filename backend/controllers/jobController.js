@@ -2,45 +2,24 @@ import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { Job } from "../models/jobSchema.js";
 import ErrorHandler from "../middlewares/error.js";
 
-// Helper: lấy đầu ngày hôm nay (00:00:00) — dùng để so sánh deadline theo ngày
-const startOfToday = () => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
+import { buildJobFilter, paginationFor, publicJobFilter, startOfToday } from "../utils/jobFilters.js";
 
-export const getAllJobs = catchAsyncErrors(async (req, res, next) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  // Limit max items per page
-  const finalLimit = Math.min(limit, 10);
-
-  const filter = {
-    expired: false,
-    status: "approved",
-    isDeleted: { $ne: true },
-    deadline: { $gte: startOfToday() },
-  };
-
-  const [jobs, total] = await Promise.all([
-    Job.find(filter)
-      .populate("postedBy", "name email companyInfo")
-      .sort({ jobPostedOn: -1 })
-      .skip(skip)
-      .limit(finalLimit),
-    Job.countDocuments(filter)
+export const getAllJobs = catchAsyncErrors(async (req, res) => {
+  const { page, limit, skip } = paginationFor(req.query);
+  const filter = buildJobFilter(req.query);
+  const [jobs, total, cities, categories] = await Promise.all([
+    Job.find(filter).populate("postedBy", "name email companyInfo")
+      .sort({ jobPostedOn: -1 }).skip(skip).limit(limit),
+    Job.countDocuments(filter),
+    Job.distinct("city", publicJobFilter()),
+    Job.distinct("category", publicJobFilter()),
   ]);
-
   res.status(200).json({
-    success: true,
-    jobs,
+    success: true, jobs, count: jobs.length,
+    filters: { cities, categories },
     pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / finalLimit),
-      totalJobs: total,
-      perPage: finalLimit,
+      currentPage: page, totalPages: Math.ceil(total / limit),
+      totalJobs: total, perPage: limit,
     },
   });
 });
@@ -209,6 +188,18 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
   const updateData = {};
   const unsetFields = {};
 
+  for (const value of [fixedSalary, salaryFrom, salaryTo]) {
+    if (value !== undefined && value !== null && value !== "" &&
+        (!Number.isFinite(Number(value)) || Number(value) <= 0)) {
+      return next(new ErrorHandler("Mức lương phải là số dương hợp lệ.", 400));
+    }
+  }
+  if (fixedSalary !== undefined && fixedSalary !== "" && fixedSalary !== null &&
+      ((salaryFrom !== undefined && salaryFrom !== "" && salaryFrom !== null) ||
+       (salaryTo !== undefined && salaryTo !== "" && salaryTo !== null))) {
+    return next(new ErrorHandler("Chỉ được nhập lương cố định hoặc khoảng lương.", 400));
+  }
+
   // Copy các field được phép (bỏ qua undefined)
   if (title !== undefined) updateData.title = title;
   if (description !== undefined) updateData.description = description;
@@ -235,7 +226,7 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
   if (deadline !== undefined) {
     updateData.deadline = deadline;
     // Nếu deadline mới >= hôm nay → tự reset expired
-    if (new Date(deadline) >= startOfToday()) {
+    if (new Date(deadline).getTime() !== new Date(job.deadline).getTime() && new Date(deadline) >= startOfToday()) {
       updateData.expired = false;
     }
   }
@@ -275,13 +266,10 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
     }
   }
 
-  // Build query
-  const updateQuery = { $set: updateData };
-  if (Object.keys(unsetFields).length > 0) {
-    updateQuery.$unset = unsetFields;
-  }
-
-  job = await Job.findByIdAndUpdate(id, updateQuery, { new: true });
+  // Save the document so schema validators and cross-field hooks also run.
+  job.set(updateData);
+  for (const field of Object.keys(unsetFields)) job.set(field, undefined);
+  await job.save();
 
   res.status(200).json({
     success: true,
@@ -320,7 +308,7 @@ export const getSingleJob = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
   try {
     const job = await Job.findById(id).populate("postedBy", "name email companyInfo");
-    if (!job || job.isDeleted) {
+    if (!job || job.isDeleted || job.status !== "approved") {
       return next(new ErrorHandler("OOPS! Không tìm thấy công việc.", 404));
     }
     res.status(200).json({
@@ -337,7 +325,7 @@ export const getDisabilityFriendlyJobs = catchAsyncErrors(async (req, res, next)
   const { disabilityType } = req.query;
 
   let filter = {
-    expired: false,
+    ...publicJobFilter(),
     isDisabilityFriendly: true,
     isDeleted: { $ne: true },
     deadline: { $gte: startOfToday() },
@@ -358,96 +346,7 @@ export const getDisabilityFriendlyJobs = catchAsyncErrors(async (req, res, next)
 });
 
 // Controller mới: Tìm kiếm và lọc công việc nâng cao
-export const searchJobs = catchAsyncErrors(async (req, res, next) => {
-  const { 
-    keyword, 
-    city, 
-    category, 
-    workMode, 
-    isDisabilityFriendly,
-    supportedDisability,
-    salaryMin,
-    salaryMax 
-  } = req.query;
-
-  let filter = { expired: false, isDeleted: { $ne: true }, deadline: { $gte: startOfToday() } };
-
-  // Tìm kiếm theo keyword trong title hoặc description
-  if (keyword) {
-    // Sanitize input to prevent NoSQL injection
-    const sanitizedKeyword = String(keyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    filter.$or = [
-      { title: { $regex: sanitizedKeyword, $options: 'i' } },
-      { description: { $regex: sanitizedKeyword, $options: 'i' } }
-    ];
-  }
-
-  // Lọc theo thành phố
-  if (city) {
-    const sanitizedCity = String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    filter.city = { $regex: sanitizedCity, $options: 'i' };
-  }
-
-  // Lọc theo danh mục
-  if (category) {
-    filter.category = category;
-  }
-
-  // Lọc theo hình thức làm việc
-  if (workMode) {
-    filter.workMode = workMode;
-  }
-
-  // Lọc theo công việc phù hợp người khiếm khuyết
-  if (isDisabilityFriendly === 'true') {
-    filter.isDisabilityFriendly = true;
-  }
-
-  // Lọc theo loại khiếm khuyết cụ thể
-  if (supportedDisability) {
-    filter.supportedDisabilities = supportedDisability;
-  }
-
-  // Lọc theo khoảng lương
-  if (salaryMin || salaryMax) {
-    filter.$or = [];
-    
-    if (salaryMin && salaryMax) {
-      filter.$or.push(
-        { 
-          fixedSalary: { 
-            $gte: Number(salaryMin), 
-            $lte: Number(salaryMax) 
-          } 
-        },
-        { 
-          $and: [
-            { salaryFrom: { $gte: Number(salaryMin) } },
-            { salaryTo: { $lte: Number(salaryMax) } }
-          ]
-        }
-      );
-    } else if (salaryMin) {
-      filter.$or.push(
-        { fixedSalary: { $gte: Number(salaryMin) } },
-        { salaryFrom: { $gte: Number(salaryMin) } }
-      );
-    } else if (salaryMax) {
-      filter.$or.push(
-        { fixedSalary: { $lte: Number(salaryMax) } },
-        { salaryTo: { $lte: Number(salaryMax) } }
-      );
-    }
-  }
-
-  const jobs = await Job.find(filter).sort({ jobPostedOn: -1 });
-
-  res.status(200).json({
-    success: true,
-    count: jobs.length,
-    jobs,
-  });
-});
+export const searchJobs = getAllJobs;
 
 // Controller mới: Gia hạn deadline
 export const extendDeadline = catchAsyncErrors(async (req, res, next) => {

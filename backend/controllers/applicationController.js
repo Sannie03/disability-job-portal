@@ -430,6 +430,7 @@ export const updateApplicationStatus = catchAsyncErrors(
 
       if (notificationType) {
         const notificationData = {
+          applicationId: application._id,
           userId: application.applicantID.user,
           type: notificationType,
           title: notificationTitle,
@@ -492,7 +493,7 @@ export const jobseekerGetInterviews = catchAsyncErrors(async (req, res, next) =>
 // Ứng viên phản hồi lịch phỏng vấn
 export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
-  const { response } = req.body; // 'confirmed' hoặc 'declined'
+  const { response, interviewDate, interviewTime } = req.body;
 
   if (!["confirmed", "declined"].includes(response)) {
     return next(new ErrorHandler("Phản hồi không hợp lệ.", 400));
@@ -508,6 +509,18 @@ export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Bạn không có quyền phản hồi lịch phỏng vấn này.", 403));
   }
 
+  if (!["accepted", "scheduled"].includes(application.status) || !application.interviewSchedule?.date) {
+    return next(new ErrorHandler("Đơn ứng tuyển chưa có lịch phỏng vấn.", 400));
+  }
+  if ((interviewDate && interviewDate !== application.interviewSchedule.date) ||
+      (interviewTime && interviewTime !== application.interviewSchedule.time)) {
+    return next(new ErrorHandler("Lịch đã thay đổi. Vui lòng mở Lịch phỏng vấn để xem lịch mới.", 409));
+  }
+  const responseDeadline = new Date(`${application.interviewSchedule.date}T00:00:00+07:00`).getTime() + 86400000;
+  if (!Number.isFinite(responseDeadline) || Date.now() >= responseDeadline) {
+    return next(new ErrorHandler("Đã hết hạn phản hồi lịch phỏng vấn.", 400));
+  }
+
   application.interviewResponse = response;
   await application.save();
 
@@ -515,6 +528,11 @@ export const interviewResponse = catchAsyncErrors(async (req, res, next) => {
 
   // Tạo thông báo cho nhà tuyển dụng
   try {
+    await Notification.updateMany({
+      userId: req.user._id, applicationId: application._id, type: "interview_scheduled",
+      "interviewDetails.date": application.interviewSchedule.date,
+      "interviewDetails.time": application.interviewSchedule.time,
+    }, { $set: { interviewResponse: response, isRead: true } });
     await Notification.create({
       userId: application.employerID.user,
       type: response === "confirmed" ? "interview_confirmed" : "interview_declined",
@@ -547,7 +565,13 @@ export const saveInterviewTranscript = catchAsyncErrors(async (req, res, next) =
   const { id } = req.params;
   const { transcript } = req.body;
 
-  if (!transcript || !Array.isArray(transcript)) {
+  if (!Array.isArray(transcript) || transcript.length > 100 || transcript.some((item) =>
+    !item || typeof item !== "object" ||
+    typeof item.question !== "string" || item.question.length > 2000 ||
+    typeof item.answer !== "string" || item.answer.length > 5000 ||
+    (item.answer_vi !== undefined && (typeof item.answer_vi !== "string" || item.answer_vi.length > 10000)) ||
+    (item.answerVi !== undefined && (typeof item.answerVi !== "string" || item.answerVi.length > 10000))
+  )) {
     return next(new ErrorHandler("Transcript không hợp lệ.", 400));
   }
 
@@ -707,6 +731,7 @@ export const rescheduleInterview = catchAsyncErrors(async (req, res, next) => {
     await Notification.create({
       userId: application.applicantID.user,
       type: "interview_scheduled",
+      applicationId: application._id,
       title: "Lịch phỏng vấn đã được thay đổi",
       message: notificationMessage,
       jobId: application.jobId?._id || application.jobId,

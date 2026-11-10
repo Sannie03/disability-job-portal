@@ -10,7 +10,8 @@ export const Context = createContext({
 
 const AppWrapper = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [user, setUser] = useState({});
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   return (
     <Context.Provider
@@ -19,6 +20,8 @@ const AppWrapper = () => {
         setIsAuthorized,
         user,
         setUser,
+        authLoading,
+        setAuthLoading,
       }}
     >
       <NotificationProvider>

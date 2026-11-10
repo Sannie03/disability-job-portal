@@ -24,19 +24,30 @@ import Settings from "./components/Settings/Settings";
 import InterviewRoom from "./components/Interview/InterviewRoom";
 import InterviewDashboard from "./components/Interview/InterviewDashboard";
 const App = () => {
-  const { isAuthorized, setIsAuthorized, setUser } = useContext(Context);
+  const { setIsAuthorized, setUser, authLoading, setAuthLoading } = useContext(Context);
   useEffect(() => {
+    let active = true;
     const fetchUser = async () => {
       try {
         const response = await api.get("/user/getuser");
+        if (!active) return;
         setUser(response.data.user);
         setIsAuthorized(true);
       } catch (error) {
+        if (!active) return;
+        setUser(null);
         setIsAuthorized(false);
+      } finally {
+        if (active) setAuthLoading(false);
       }
     };
     fetchUser();
-  }, [isAuthorized]);
+    return () => { active = false; };
+  }, [setIsAuthorized, setUser, setAuthLoading]);
+
+  if (authLoading) {
+    return <div className="loading" role="status">Đang tải tài khoản...</div>;
+  }
 
   return (
     <>

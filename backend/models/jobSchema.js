@@ -132,7 +132,9 @@ jobSchema.pre("save", function (next) {
     now.setHours(0, 0, 0, 0);
     const dl = new Date(this.deadline);
     dl.setHours(0, 0, 0, 0);
-    this.expired = now > dl;
+    if (this.isNew || this.isModified("deadline") || now > dl) {
+      this.expired = now > dl;
+    }
   }
   next();
 });

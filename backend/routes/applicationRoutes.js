@@ -16,6 +16,7 @@ import {
   rescheduleInterview,
 } from "../controllers/applicationController.js";
 import { isAuthenticated, authorizeRoles } from "../middlewares/auth.js";
+import { getInterviewAccess } from "../controllers/interviewAccessController.js";
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ router.get("/employer/getall", isAuthenticated, authorizeRoles("Employer"), empl
 router.put("/update-status/:id", isAuthenticated, authorizeRoles("Employer"), updateApplicationStatus);
 
 // Interview routes
+router.post("/interview-access/:id", isAuthenticated, authorizeRoles("Employer", "Job Seeker"), getInterviewAccess);
 router.get("/employer/interviews", isAuthenticated, authorizeRoles("Employer"), employerGetInterviews);
 router.get("/employer/interviews/calendar", isAuthenticated, authorizeRoles("Employer"), employerGetInterviewsByDateRange);
 router.get("/jobseeker/interviews", isAuthenticated, authorizeRoles("Job Seeker"), jobseekerGetInterviews);

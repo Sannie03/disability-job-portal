@@ -16,13 +16,13 @@ import mediapipe as mp
 import time
 from engine import (
     LetterRecognizer,
-    WordI3DRecognizer,
     MotionDetector,
     LetterStabilizer,
     TextBuffer,
     Translator,
 )
 from engine.text_renderer import put_text
+from engine.optional_word_recognizer import load_word_recognizer
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 STABILITY_FRAMES = 10
@@ -113,13 +113,9 @@ def main():
     print(f"  Letter (SVM): {letter_rec.num_classes} classes")
 
     print("  Loading I3D model (this may take a moment)...")
-    word_rec = WordI3DRecognizer(
-        model_path="models/word_i3d/asl100.pt",
-        class_list_path="models/word_i3d/wlasl_class_list.txt",
-        i3d_module_path="i3d",
-        num_classes=100,
-    )
-    print(f"  Word (I3D): {word_rec.num_classes} classes")
+    word_rec = load_word_recognizer()
+    if word_rec:
+        print(f"  Word (I3D): {word_rec.num_classes} classes")
     print("All models loaded!\n")
 
     # Initialize components
@@ -143,7 +139,7 @@ def main():
     )
 
     # State variables
-    user_mode = "AUTO"          # User-selected mode: AUTO, LETTER, WORD
+    user_mode = "AUTO" if word_rec else "LETTER"
     svm_blocked = 0             # Frames to block SVM after word recognition
     i3d_frame_buffer = []       # Buffer for I3D frames
     i3d_recording = False       # Whether we're currently recording for I3D
@@ -244,7 +240,7 @@ def main():
                     i3d_frame_buffer.clear()
 
             # ── WORD MODE: Buffer frames for I3D ──
-            if effective_mode == "WORD" or is_moving:
+            if word_rec and (effective_mode == "WORD" or is_moving):
                 stabilizer.reset()
                 moving_frame_count += 1
 
@@ -354,7 +350,7 @@ def main():
                 text_buffer.add_space()
 
         elif key == ord('m') or key == ord('M'):
-            modes = ["AUTO", "LETTER", "WORD"]
+            modes = ["AUTO", "LETTER", "WORD"] if word_rec else ["LETTER"]
             idx = modes.index(user_mode)
             user_mode = modes[(idx + 1) % len(modes)]
             print(f"  [Mode: {user_mode}]")

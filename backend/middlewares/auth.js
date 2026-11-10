@@ -8,7 +8,7 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   if (!token) {
     return next(new ErrorHandler("Người dùng không được phép truy cập", 401));
   }
-  const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+  const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY, { algorithms: ["HS256"] });
 
   req.user = await User.findById(decoded.id);
 

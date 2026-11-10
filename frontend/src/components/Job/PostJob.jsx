@@ -234,7 +234,7 @@ const PostJob = () => {
     try {
       await api.post("/job/post", jobData)
       toast.success("Đăng tin thành công! Tin đang chờ duyệt.")
-      navigate("/myjobs")
+      navigate("/job/me")
     } catch (error) {
       toast.error(error.response?.data?.message || "Đăng tin thất bại")
     } finally {

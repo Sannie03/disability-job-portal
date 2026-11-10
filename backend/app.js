@@ -1,5 +1,4 @@
 import express from "express";
-import dbConnection  from "./database/dbConnection.js";
 import jobRouter from "./routes/jobRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import applicationRouter from "./routes/applicationRoutes.js";
@@ -13,9 +12,24 @@ import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
+import mongoose from "mongoose";
 
 const app = express();
 config({ path: "./.env" });
+
+if (process.env.NODE_ENV === "production") {
+  // Direct Render traffic has one trusted proxy; override for another topology.
+  const proxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
+  if (!Number.isInteger(proxyHops) || proxyHops < 1) {
+    throw new Error("TRUST_PROXY_HOPS must be a positive integer");
+  }
+  app.set("trust proxy", proxyHops);
+}
+
+app.get("/health", (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({ status: ready ? "ok" : "unavailable" });
+});
 
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -31,6 +45,8 @@ const fallbackOrigins = [
   "http://localhost:4173",
   "http://127.0.0.1:4173",
   "https://23b620f57c0d.ngrok-free.app",
+  "https://52hzconnect.site",
+  "https://www.52hzconnect.site",
 ];
 
 const envOrigins = process.env.FRONTEND_URL
@@ -66,8 +82,10 @@ const authLimiter = rateLimit({
 });
 app.use("/api/v1/user/login", authLimiter);
 app.use("/api/v1/user/register", authLimiter);
+app.use("/api/v1/user/google-login", authLimiter);
 
 app.use(cookieParser());
+app.use("/api/v1/application/save-transcript", express.json({ limit: "256kb" }));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(mongoSanitize());
@@ -83,7 +101,6 @@ app.use("/api/v1/job", jobRouter);
 app.use("/api/v1/application", applicationRouter);
 app.use("/api/v1/notification", notificationRouter);
 app.use("/api/v1/admin", adminRouter);
-dbConnection();
 
 app.use(errorMiddleware);
 export default app;

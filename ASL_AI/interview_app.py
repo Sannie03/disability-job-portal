@@ -26,13 +26,13 @@ import tkinter as tk
 from tkinter import font as tkfont
 from engine import (
     LetterRecognizer,
-    WordI3DRecognizer,
     MotionDetector,
     LetterStabilizer,
     TextBuffer,
     Translator,
 )
 from engine.text_renderer import put_text
+from engine.optional_word_recognizer import load_word_recognizer
 from interview import InterviewManager
 
 # ─── Configuration ────────────────────────────────────────────────────────────
@@ -272,13 +272,9 @@ def opencv_loop(question_queue, end_event, hr_update_queue):
     print(f"  Letter (SVM): {letter_rec.num_classes} classes")
 
     print("  Loading I3D model...")
-    word_rec = WordI3DRecognizer(
-        model_path="models/word_i3d/asl100.pt",
-        class_list_path="models/word_i3d/wlasl_class_list.txt",
-        i3d_module_path="i3d",
-        num_classes=100,
-    )
-    print(f"  Word (I3D): {word_rec.num_classes} classes")
+    word_rec = load_word_recognizer()
+    if word_rec:
+        print(f"  Word (I3D): {word_rec.num_classes} classes")
     print("All models loaded!\n")
 
     # Initialize
@@ -304,7 +300,7 @@ def opencv_loop(question_queue, end_event, hr_update_queue):
     )
 
     # State
-    user_mode = "AUTO"
+    user_mode = "AUTO" if word_rec else "LETTER"
     svm_blocked = 0
     i3d_frame_buffer = []
     i3d_recording = False
@@ -429,7 +425,7 @@ def opencv_loop(question_queue, end_event, hr_update_queue):
                     i3d_frame_buffer.clear()
 
             # ── WORD ──
-            if effective_mode == "WORD" or is_moving:
+            if word_rec and (effective_mode == "WORD" or is_moving):
                 stabilizer.reset()
                 moving_frame_count += 1
 
@@ -536,7 +532,7 @@ def opencv_loop(question_queue, end_event, hr_update_queue):
             hr_update_queue.put(("answer", ("", "")))
 
         elif key == ord('m') or key == ord('M'):
-            modes = ["AUTO", "LETTER", "WORD"]
+            modes = ["AUTO", "LETTER", "WORD"] if word_rec else ["LETTER"]
             idx = modes.index(user_mode)
             user_mode = modes[(idx + 1) % len(modes)]
             print(f"  [Mode: {user_mode}]")

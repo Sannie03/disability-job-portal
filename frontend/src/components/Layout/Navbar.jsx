@@ -11,7 +11,7 @@ import "./Navbar.css";
 
 const Navbar = () => {
   const [show, setShow] = useState(false);
-  const { isAuthorized, setIsAuthorized, user } = useContext(Context);
+  const { isAuthorized, setIsAuthorized, user, setUser } = useContext(Context);
   const navigateTo = useNavigate();
 
   const handleLogout = async () => {
@@ -19,6 +19,7 @@ const Navbar = () => {
       const response = await api.get("/user/logout");
       toast.success(response.data.message);
       setIsAuthorized(false);
+      setUser(null);
       navigateTo("/login");
     } catch (error) {
       toast.error(error.response.data.message);

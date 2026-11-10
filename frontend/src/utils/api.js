@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api/v1",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1",
   withCredentials: true,
 });
 
@@ -12,7 +12,7 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // Bỏ qua redirect cho getuser (kiểm tra auth ban đầu)
       const url = error.config?.url || "";
-      if (!url.includes("/user/getuser")) {
+      if (!url.includes("/user/getuser") && !url.includes("/user/google-login") && !url.includes("/user/login")) {
         window.location.href = "/login";
       }
     }

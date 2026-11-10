@@ -1,12 +1,17 @@
 import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { User } from "../models/userSchema.js";
 import ErrorHandler from "../middlewares/error.js";
-import { sendToken } from "../utils/jwtToken.js";
+import { getTokenCookieOptions, sendToken } from "../utils/jwtToken.js";
+import { serializeUser } from "../utils/serializeUser.js";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
   const { name, email, phone, password, role } = req.body;
   if (!name || !email || !phone || !password || !role) {
     return next(new ErrorHandler("Vui lòng điền đầy đủ thông tin!", 400));
+  }
+
+  if (!["Job Seeker", "Employer"].includes(role)) {
+    return next(new ErrorHandler("Vai trò đăng ký không hợp lệ.", 403));
   }
 
   // Validate phone (giữ dạng chuỗi để không mất số 0 ở đầu)
@@ -47,7 +52,7 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Vui lòng cung cấp email, mật khẩu và vai trò!", 400));
   }
   const user = await User.findOne({ email }).select("+password");
-  if (!user) {
+  if (!user || user.authProvider !== "local" || !user.password) {
     return next(new ErrorHandler("Email hoặc mật khẩu không hợp lệ.", 400));
   }
   const isPasswordMatched = await user.comparePassword(password);
@@ -73,20 +78,21 @@ export const googleLogin = catchAsyncErrors(async (req, res, next) => {
   }
 
   // Không cho phép đăng nhập Google với vai trò Admin
-  if (role === "Admin") {
-    return next(new ErrorHandler("Không thể đăng nhập Google với vai trò Quản trị viên!", 403));
+  if (role !== undefined && !["Job Seeker", "Employer"].includes(role)) {
+    return next(new ErrorHandler("Vai trò đăng nhập Google không hợp lệ.", 403));
   }
 
   try {
     // Verify Google token
     const { OAuth2Client } = await import("google-auth-library");
-    const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+    const client = new OAuth2Client(googleClientId);
 
     console.log("Verifying token with client ID:", process.env.VITE_GOOGLE_CLIENT_ID);
 
     const ticket = await client.verifyIdToken({
       idToken: tokenId,
-      audience: process.env.VITE_GOOGLE_CLIENT_ID,
+      audience: googleClientId,
     });
 
     const payload = ticket.getPayload();
@@ -151,6 +157,7 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
   res
     .status(200)
     .cookie("token", "", {
+      ...getTokenCookieOptions(),
       httpOnly: true,
       expires: new Date(Date.now()),
     })
@@ -165,7 +172,7 @@ export const getUser = catchAsyncErrors((req, res, next) => {
   const user = req.user;
   res.status(200).json({
     success: true,
-    user,
+    user: serializeUser(user),
   });
 });
 

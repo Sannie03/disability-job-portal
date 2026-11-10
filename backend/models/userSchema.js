@@ -142,7 +142,7 @@ userSchema.methods.getJWTToken = function () {
     { id: this._id, role: this.role },
     process.env.JWT_SECRET_KEY,
     {
-      expiresIn: process.env.JWT_EXPIRE,
+      expiresIn: process.env.JWT_EXPIRE || "7d",
     }
   );
 };

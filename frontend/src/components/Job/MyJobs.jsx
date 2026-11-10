@@ -1,4 +1,5 @@
 import api from "../../utils/api";
+import { salaryForUpdate } from "../../utils/jobSalary";
 import { JOB_DISABILITY_OPTIONS } from "../../utils/constants";
 import { useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -65,6 +66,7 @@ const MyJobs = () => {
       city: job.city,
       location: job.location,
       description: job.description,
+      expired: !!job.expired,
       workMode: job.workMode,
       isFlexibleTime: !!job.isFlexibleTime,
       workTime: job.isFlexibleTime
@@ -75,16 +77,7 @@ const MyJobs = () => {
       supportedDisabilities: job.supportedDisabilities || [],
     };
 
-    // chỉ gửi 1 loại salary để tránh conflict trên backend
-    if (job.salaryType === "fixed") {
-      payload.fixedSalary = Number(job.fixedSalary) || 0;
-      payload.salaryFrom = "";
-      payload.salaryTo = "";
-    } else {
-      payload.fixedSalary = "";
-      payload.salaryFrom = Number(job.salaryFrom) || 0;
-      payload.salaryTo = Number(job.salaryTo) || 0;
-    }
+    Object.assign(payload, salaryForUpdate(job));
 
     try {
       const res = await api.put(

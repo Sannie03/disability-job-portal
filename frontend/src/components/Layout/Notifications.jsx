@@ -7,7 +7,7 @@ import "./Notifications.css";
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } =
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, fetchNotifications } =
     useNotifications();
   const [filter, setFilter] = useState("all"); // all, unread, read
 
@@ -71,6 +71,8 @@ const Notifications = () => {
     } else if (notification.type === "interview_scheduled") {
       // Ứng viên nhận lịch phỏng vấn → Xem lịch phỏng vấn
       navigate('/interviews');
+    } else if (notification.type === "job_rejected") {
+      return;
     } else if (notification.jobId) {
       // Các thông báo khác (job_approved, job_rejected) → Xem chi tiết công việc
       navigate(`/job/${notification.jobId}`);
@@ -82,13 +84,17 @@ const Notifications = () => {
   };
 
   const handleInterviewResponse = async (notification, response) => {
+    if (!notification.applicationId) {
+      navigate("/interviews");
+      return;
+    }
     try {
-      await api.post(
-        "/application/interview-response",
+      await api.put(
+        `/application/interview-response/${notification.applicationId}`,
         {
-          notificationId: notification._id,
-          jobId: notification.jobId,
-          response: response,
+          response,
+          interviewDate: notification.interviewDetails?.date,
+          interviewTime: notification.interviewDetails?.time,
         }
       );
 
@@ -99,7 +105,7 @@ const Notifications = () => {
       }
 
       // Đánh dấu thông báo đã đọc
-      markAsRead(notification._id);
+      await fetchNotifications();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
     }

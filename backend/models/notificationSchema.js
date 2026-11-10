@@ -33,6 +33,10 @@ const notificationSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: "Job",
   },
+  applicationId: {
+    type: mongoose.Schema.ObjectId,
+    ref: "Application",
+  },
   // Thông tin chi tiết lịch phỏng vấn (cho notification về interview)
   interviewDetails: {
     date: String,

@@ -3,8 +3,9 @@ import dotenv from "dotenv"
 dotenv.config()
 
 //Database connection here!
- const dbConnection  = ()=>{
-    mongoose.connect(process.env.DB_URL,{
+ const dbConnection  = async ()=>{
+    if (!process.env.DB_URL) throw new Error("DB_URL is required");
+    return mongoose.connect(process.env.DB_URL,{
        dbName: "Job_Portal"
 
     }).then(async ()=>{ //agar connect ho jaye toh!
@@ -35,9 +36,7 @@ dotenv.config()
          // Không chặn app khởi động nếu fix index thất bại
          console.warn("Cảnh báo khi fix index:", indexErr.message);
        }
-    }).catch((error)=>{
-        console.log(`Failed to connect ${error}`) //warna error de do console me!
-    })
+    });
 
 }
 export default dbConnection;

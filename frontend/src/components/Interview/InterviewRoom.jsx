@@ -8,7 +8,7 @@ import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 import "./InterviewRoom.css";
 
-const ASL_SERVER = "http://localhost:5001";
+const ASL_SERVER = import.meta.env.VITE_ASL_SERVER_URL || "http://localhost:5001";
 
 const InterviewRoom = () => {
   const { applicationId } = useParams();
@@ -26,6 +26,8 @@ const InterviewRoom = () => {
   const [qaPairs, setQaPairs] = useState([]);
   const [ended, setEnded] = useState(false);
   const [webcamActive, setWebcamActive] = useState(false);
+  const [connectionError, setConnectionError] = useState("");
+  const [transcriptSaveError, setTranscriptSaveError] = useState(false);
 
   const socketRef = useRef(null);
   const videoRef = useRef(null);
@@ -34,6 +36,24 @@ const InterviewRoom = () => {
 
   const isHR = user?.role === "Employer";
   const isCandidate = user?.role === "Job Seeker";
+
+  const saveTranscript = useCallback(async (transcript) => {
+    try {
+      await api.put(`/application/save-transcript/${applicationId}`, { transcript });
+      setTranscriptSaveError(false);
+    } catch {
+      setTranscriptSaveError(true);
+      toast.error("Chưa lưu được bản ghi. Vui lòng bấm Lưu lại bản ghi.");
+    }
+  }, [applicationId]);
+
+  const stopWebcam = useCallback(() => {
+    cameraRef.current?.stop();
+    cameraRef.current = null;
+    handsRef.current?.close();
+    handsRef.current = null;
+    setWebcamActive(false);
+  }, []);
 
   // Connect to ASL SocketIO server
   useEffect(() => {
@@ -44,18 +64,40 @@ const InterviewRoom = () => {
 
     const socket = io(ASL_SERVER, {
       transports: ["websocket", "polling"],
+      autoConnect: false,
+      auth: (callback) => {
+        api.post(`/application/interview-access/${applicationId}`)
+          .then(({ data }) => {
+            if (socketRef.current === socket) callback({ token: data.token });
+          })
+          .catch((error) => {
+            if (socketRef.current !== socket) return;
+            setConnectionError(error.response?.data?.message || "Không thể xác nhận quyền vào phòng.");
+            socket.disconnect();
+          });
+      },
     });
     socketRef.current = socket;
 
     socket.on("connect", () => {
       setConnected(true);
+      setConnectionError("");
       socket.emit("join_room", {
         room_id: applicationId,
-        role: user.role,
       });
     });
 
-    socket.on("disconnect", () => setConnected(false));
+    socket.on("disconnect", () => {
+      setConnected(false);
+      setRoomStatus({ hr: false, candidate: false });
+    });
+    socket.on("connect_error", () => {
+      setConnectionError("Không thể kết nối dịch vụ ASL. Kiểm tra kết nối hoặc tải lại phòng.");
+    });
+    socket.on("room_error", (data) => {
+      setConnectionError(data.message);
+      toast.error(data.message);
+    });
     socket.on("room_status", (data) => setRoomStatus(data));
 
     socket.on("new_question", (data) => {
@@ -76,10 +118,13 @@ const InterviewRoom = () => {
 
     socket.on("answer_submitted", (data) => {
       setQaPairs(data.qa_pairs);
+      setQuestion("");
       setAnswerText("");
       setAnswerVi("");
       toast.success("Đã gửi câu trả lời!");
     });
+
+    socket.on("transcript_update", (data) => setQaPairs(data.qa_pairs));
 
     socket.on("interview_ended", (data) => {
       setQaPairs(data.transcript);
@@ -88,23 +133,24 @@ const InterviewRoom = () => {
       toast.success("Phỏng vấn đã kết thúc!");
 
       if (isHR && data.transcript.length > 0) {
-        api.put(`/application/save-transcript/${applicationId}`, {
-          transcript: data.transcript,
-        }).catch(() => {});
+        saveTranscript(data.transcript);
       }
     });
+
+    socket.connect();
 
     return () => {
       stopWebcam();
       socket.disconnect();
+      socketRef.current = null;
     };
-  }, []);
+  }, [applicationId, isAuthorized, isHR, navigate, saveTranscript, stopWebcam]);
 
   // MediaPipe Hands callback - gửi landmarks lên server
   const onHandResults = useCallback((results) => {
     if (!socketRef.current?.connected) return;
 
-    const hand_detected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+    const hand_detected = Boolean(results.multiHandLandmarks?.length);
     let landmarks = [];
 
     if (hand_detected) {
@@ -126,7 +172,7 @@ const InterviewRoom = () => {
   const startWebcam = async () => {
     try {
       const hands = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`,
       });
       hands.setOptions({
         maxNumHands: 1,
@@ -155,8 +201,13 @@ const InterviewRoom = () => {
       width: 640,
       height: 480,
     });
-    camera.start();
     cameraRef.current = camera;
+    camera.start().catch((error) => {
+      if (cameraRef.current === camera) {
+        stopWebcam();
+        toast.error("Không thể bật webcam: " + error.message);
+      }
+    });
 
     return () => {
       if (cameraRef.current) {
@@ -164,19 +215,7 @@ const InterviewRoom = () => {
         cameraRef.current = null;
       }
     };
-  }, [webcamActive]);
-
-  const stopWebcam = () => {
-    if (cameraRef.current) {
-      cameraRef.current.stop();
-      cameraRef.current = null;
-    }
-    if (handsRef.current) {
-      handsRef.current.close();
-      handsRef.current = null;
-    }
-    setWebcamActive(false);
-  };
+  }, [webcamActive, stopWebcam]);
 
   const handleSendQuestion = (e) => {
     e.preventDefault();
@@ -234,6 +273,11 @@ const InterviewRoom = () => {
                 </div>
               ))}
             </div>
+            {transcriptSaveError && isHR && (
+              <button className="btn-back" onClick={() => saveTranscript(qaPairs)}>
+                Lưu lại bản ghi
+              </button>
+            )}
             <button className="btn-back" onClick={() => navigate("/interviews")}>
               Quay lại lịch phỏng vấn
             </button>
@@ -254,7 +298,7 @@ const InterviewRoom = () => {
           </div>
           <div className="room-status">
             <span className={`status-chip ${connected ? "online" : "offline"}`}>
-              {connected ? "Đã kết nối" : "Đang kết nối..."}
+              {connected ? "Đã kết nối" : connectionError ? "Chưa kết nối" : "Đang kết nối..."}
             </span>
             <span className={`status-chip ${roomStatus.hr ? "online" : "waiting"}`}>
               HR {roomStatus.hr ? "Online" : "Offline"}
@@ -269,6 +313,8 @@ const InterviewRoom = () => {
             </button>
           )}
         </header>
+
+        {connectionError && <div className="connection-notice" role="alert">{connectionError}</div>}
 
         {/* Connection warning */}
         {connected && isHR && !roomStatus.candidate && (
@@ -289,7 +335,7 @@ const InterviewRoom = () => {
               <>
                 {!webcamActive ? (
                   <div className="webcam-placeholder">
-                    <button className="btn-start-cam" onClick={startWebcam}>
+                    <button className="btn-start-cam" onClick={startWebcam} disabled={!connected}>
                       Bật Webcam
                     </button>
                     <p>Bật webcam để bắt đầu nhận dạng ngôn ngữ ký hiệu</p>

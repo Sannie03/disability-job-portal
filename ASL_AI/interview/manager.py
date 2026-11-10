@@ -59,7 +59,7 @@ class InterviewManager:
     def end(self):
         """End the interview and save any remaining Q&A."""
         if self.current_question and self.current_answer:
-            self._save_current()
+            self.submit_answer()
         self.is_active = False
 
     def get_transcript_text(self):
